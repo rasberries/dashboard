@@ -1,0 +1,14 @@
+<aside id="primary">
+	<nav>
+	<%- DepMan.render ["document", "_misc"] %>
+	</nav>				
+	<label for="text{{node.$index}}">
+		<span <%= _T "Node Text" %>></span>
+		<div>
+			<input type="text" ng-model="node.text" ng-change="replicate(node, 'text')"/>
+		</div>
+	</label>
+	<nav id="primary">
+	<%- DepMan.render ["document", "_nav"] %>
+	</nav>
+</aside>			

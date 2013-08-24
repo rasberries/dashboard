@@ -1,0 +1,163 @@
+&#application
+	background #444
+	z-index 2
+	transform translateX(150%) scale(0.8)
+	asidewidth = 300px
+	aside, section
+		position absolute
+		top 0
+		bottom 0
+		left 0
+		right 0
+	aside
+		left 0
+		right auto
+		width asidewidth
+		background #222
+		color white
+		transform translateX(-(asidewidth / 2)) scale(0.8)
+		transition all 1s ease-in-out
+		&.active
+			transform none
+		h1
+			height 40px
+			line-height 30px
+			font-size 24pt
+			border-bottom solid 2px #999
+			margin-bottom 75px
+			text-indent 25px
+		& > li
+			display block
+			padding 15px 15px
+			font-size 14pt
+			border-bottom solid 1px #444
+			transition all 0.5s ease-in-out
+			i
+				margin-right 15px
+			&:first-of-type
+				border-top solid 1px #444
+			&:hover
+				background rgba(256, 256, 256, 0.1)
+			color orangecol
+			&.active
+				color bluecol
+				background rgba(256, 256, 256, 0.8)
+				&:hover
+					background rgba(256, 256, 256, 1)
+
+	section
+		background white
+		transform translateX(asidewidth) scale(1.2)
+		transform-origin left center
+		overflow hidden
+		box-shadow 0 0 15px black
+		transition all 1s ease-in-out
+		background #222
+		&.active
+			transform none
+		> article
+			position absolute
+			top 0
+			bottom 0
+			left 0
+			right 0
+			transition all 1s ease-in-out 
+			transform translateX(-110%)
+			padding 25px
+			background white
+			&.active
+				transform none
+				~ article
+					transform translateX(110%)
+			h1
+				margin -25px -25px 0
+				padding 15px
+				font-size 20pt
+				color orangecol
+				border-bottom solid 1px orangecol
+				box-shadow 0 0 5px rgba(0, 0, 0, 0.2)
+				background #222
+				font-weight 100
+			.form
+				display block
+				margin 50px 0 0 0
+				padding 25px
+				border solid 5px lighten(bluecol, 50)
+				padding-bottom 75px
+				position relative
+				hr
+					border none
+					border-top solid 1px lighten(bluecol, 50)
+					margin 25px -25px
+					clear both
+				br
+					clear both
+				label
+					display block
+					overflow hidden
+					clear both
+					background transparent
+					span, input
+						display inline-block
+						float left
+						padding 7px 0
+						margin 0 0 20px
+						&:last-of-type
+							margin 0
+					span
+						width 30%
+					input
+						width 65%
+				button
+					display block
+					background lighten(bluecol, 30)
+					border none
+					position absolute
+					bottom -5px
+					left -5px
+					right -5px
+					height 50px
+					line-height 50px
+					color rgba(256, 256, 256, 0.7)
+					margin 0
+					transition all 0.5s ease-in-out
+					&:hover
+						background bluecol
+						color white
+			#recipies-container
+				nav
+					position absolute
+					top 0
+					right 0
+					height 25px
+					li
+						list-style none
+						float right
+						display inline-block
+						height 25px
+						width 25px
+						text-align center
+						line-height 25px
+						font-size 12pt
+						margin 5px 10px
+					&.add
+						display block
+						position relative
+						li
+							width 100%
+				article, label, div, li
+					display block
+					position relative
+				.active
+					display block
+				.inactive
+					display none
+				article article
+					padding-left 25px
+				article 
+					background white
+					border solid 5px lighten(bluecol, 50)
+					padding 5px 10px
+					margin 10px 0
+					article
+						background lighten(bluecol, 40)

@@ -1,0 +1,1 @@
+web: node server -c -s

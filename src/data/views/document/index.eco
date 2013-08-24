@@ -1,0 +1,19 @@
+<section ng-controller="Document" ng-class="{0: 'sidebarclosed', 1: 'sidebaropen'}[runtime.props['sidebar-state']]">
+	<header>
+		{{activeDocument.title}} 
+		<nav>
+			<li ng-click="runtime.set('document-state', 1)" ng-class="{0: 'inactive', 1: 'active'}[runtime.props['document-state']]"><i class="icon-sitemap"></i></li>
+			<li ng-click="runtime.set('document-state', 0)" ng-class="{0: 'active', 1: 'inactive'}[runtime.props['document-state']]"><i class="icon-list"></i></li>
+		</nav>
+	</header>
+	<section id="outline" ng-class="{1: 'inactive', 0: 'active'}[runtime.props['document-state']]">
+		<article ng-repeat="node in activeDocument.indexes" ng-class="{true: 'inactive', false: 'active'}[node.$hidden]" ng-style="getStyles(node)">
+		 	<%- DepMan.render ["document", "_main"] %>
+		 	<%- DepMan.render ["document", "_alt"] %>
+		</article>
+		<aside ng-click="addRoot()"><i class="icon-plus"></i></aside>
+	</section>
+	<section id="mindmap" ng-class="{0: 'inactive', 1: 'active'}[runtime.props['document-state']]">
+		<canvas></canvas>
+	</section>
+</section>

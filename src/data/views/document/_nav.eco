@@ -1,0 +1,6 @@
+<li ng-click="add(node)" class="add button"><i class="icon-plus"></i></li>
+<li ng-click="remove(node)" class="remove button"><i class="icon-remove"></i></li>
+<li ng-click="modalEdit(node)" class="modal button"><i class="icon-gear"></i></li>
+<li class="button showhide">
+	<label for="showhide{{node.$index}}"><input type="checkbox" ng-model="node.$viewmore" id="showhide{{node.$index}}"><i ng-class="{true: 'icon-eye-open', false: 'icon-eye-close'}[node.$viewmore]"></i></label>
+</li>

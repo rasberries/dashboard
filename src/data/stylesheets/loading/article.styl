@@ -1,0 +1,66 @@
+angle = 30deg
+
+> article
+	height 200px
+	width 350px
+	background white
+	border-radius 4px
+	box-shadow 0 5px 5px rgba(0, 0, 0, 0.2)
+	border solid 1px rgba(0, 0 ,0 ,0.2)
+	opacity 0
+	position absolute
+	z-index 9
+	left 50%
+	top 50%
+	margin -100px 0 0 -175px
+	text-align center
+	transform scale(10)
+	font-family Roboto
+	font-size 18pt
+	font-weight 100
+	text-align center
+	line-height 200px
+	vertical-align middle
+	> span,p, div
+		display inline-block
+		vertical-align middle
+	> span
+		width 30px
+		height 30px
+		border-radius 100%
+		border solid 1px rgba(0, 0, 0, 0.3)
+		margin-top -6px
+	div
+		width 0
+		overflow hidden
+		p
+			float left
+		&:last-of-type p
+			float right
+	> p
+		line-height 1em
+		position absolute
+		left 10%
+		right 10%
+		top 65%
+		height 50px
+		font-size 14pt
+		overflow hidden
+
+	&:hover 
+		> span
+			border-color rgba(0, 0, 0, 0.8)
+		div
+			width 80px
+			margin 0
+			padding 0
+			margin-left 11px
+			&:last-of-type
+				width 11px
+				margin 0
+				margin-right 80px
+	
+
+&.active > article
+	opacity 1
+	transform scale(1)

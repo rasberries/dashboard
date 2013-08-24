@@ -1,0 +1,13 @@
+<div id="editform">
+	<div id="textcontainer"><label for="text" <%= _T "The text of the node" %>></label><input type="text" id="text"></div>
+	<div id="checkcontainer"><label for="checked" <%= _T "Is this node checked?" %>></label><input type="checkbox"  id="checked"></div>
+	<div id="foldcontainer"><label for="folded" <%= _T "Is this node folded?" %>></label><input type="checkbox" id="folded"></div>
+	<div id="relationcontainer"><label for="relation" <%= _T "Relation with its parent" %>></label><input type="text" id="relation"></div>
+	<div id="notecontainer"><label for="note" <%= _T "Notes attached" %>></label><textarea id="note"></textarea></div>
+	<br>
+	<div id="buttoncontainer">
+		<input type="button" id="addnode" <%= _T "Add a new node", "value" %>>
+		<input type="button" id="removenode" <%= _T "Remove this node", "value" %>>
+	</div>
+	<br>
+</div>

@@ -1,0 +1,11 @@
+<section id="loadingscreen">
+	<section></section>
+	<aside data-location='left'></aside>
+	<aside data-location='right'></aside>
+	<article>
+		<div><p>Revelati</p></div>
+		<span></span>
+		<div><p>n</p></div>
+		<p><span id="loadingmessage"></span></p>
+	</article>
+</section>

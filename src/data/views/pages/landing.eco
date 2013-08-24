@@ -1,0 +1,18 @@
+<div ng-controller="Landing" id="landingpage">
+	<section>
+	  <header>
+	  	<h1 class="left">Raspr</h1>
+	  	<img src="<%= DepMan.image "logo" %>" alt="" />
+	  	<h1 class="right">Store</h1>
+	  </header>
+	</section>
+	<section id='raspmenu' ng-style="height('login')">
+		<aside><%- DepMan.render "pages/landing/login" %></aside>
+		<aside><%- DepMan.render "pages/landing/register" %></aside>
+		<nav><h1 ng-click="readMore()" <%= _T "Read More" %>></h1></nav>
+	</section>
+	<section ng-repeat="(section, html) in sections" ng-style="height('full')" >
+		<div class='container' id="{{section}}" ng-bind-html-unsafe="html"></div>
+	</section>
+	<section id="contact"><%- DepMan.render "pages/landing/contact" %></section>
+</div>

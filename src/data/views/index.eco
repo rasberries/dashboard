@@ -1,0 +1,9 @@
+<section id="help">
+	<%- DepMan.render ["pages", "help"] %>
+</section>
+<section id="landing">
+	<%- DepMan.render [ "pages", "landing" ] %>
+</section>
+<section id="application">
+	<%- DepMan.render [ "app", "index"] %>
+</section>

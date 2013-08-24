@@ -1,0 +1,11 @@
+<%= console.log @ %>
+<section ng-controller='Modal' id='modal-window' ng-class="{<%= @States["closed"] %>: 'closed', <%= @States["normal"] %>: 'normal', <%= @States["fullscreen"] %>: 'fullscreen'}[runtime.props['modal-state']]">
+	<section>
+	<header ng-bind='title'></header>
+	  <nav>
+		<li ng-click='runtime.set("modal-state", <%= @States['closed'] %>)' ><i class="icon-remove"></i></li>
+		<li ng-click='toggle()'><i class="icon-fullscreen"></i></li>
+	  </nav>
+	  <article ng-bind-html-unsafe='content'></article>
+	</section>
+</section>

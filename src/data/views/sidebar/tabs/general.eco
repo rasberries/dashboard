@@ -1,0 +1,12 @@
+<h1 <%= _T "General Application Settings" %>></h1>
+<ul>
+	<li ng-click="runtime.set('app-state', 0)"><p <%= _T "Activate the landing page" %>></p></li>
+	<li ng-click="runtime.set('app-state', 2)"><p <%= _T "Activate the help page" %>></p></li>
+	<li>
+		<label for="languageselect" <%= _T "Select your language of choice" %>></label>
+		<select ng-change="runtime.set('language', language)" ng-model='language' id="languageselect">
+			<option value="en-US" <%= _T "English" %>></option>
+			<option value="ro-RO" <%= _T "Romanian" %>></option>
+		</select>
+	</li>
+</ul>

@@ -1,0 +1,8 @@
+<label for="folding{{node.$index}}" ng-class="{'determinate': 'active', 'indeterminate': 'active', 'checked': 'inactive', 'unchecked': 'inactive'}[node.status]">
+	<input type="checkbox" id="folding{{node.$index}}" ng-model="node.$folded" ng-change="refresh(node)"/>
+	<i ng-class="{true: 'icon-chevron-right', false: 'icon-chevron-down'}[node.$folded]"></i>
+</label>
+<label for="status{{node.$index}}">
+	<input type="checkbox" id="status{{node.$index}}" ng-model="node.$status" ng-change="changeStatus(node)">
+	<i ng-class="{'checked': 'icon-check', 'unchecked': 'icon-check-empty', 'determinate': 'icon-circle', 'indeterminate': 'icon-adjust'}[node.status]"></i>
+</label>

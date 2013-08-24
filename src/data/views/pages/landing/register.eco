@@ -1,0 +1,9 @@
+<div class="container">
+	<h1 <%= _T "Register" %>></h1>
+	<div class="content">
+		<input type="text" id="register-email" <%= _T "EMail", "placeholder" %>>
+		<input type="password" id="register-pass" <%= _T "Password", "placeholder" %>>
+		<input type="password" id="register-pass-verify" <%= _T "Password Verification", "placeholder" %>>
+		<button <%= _T "Submit" %>></button>
+	</div>
+</div>

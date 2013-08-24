@@ -1,0 +1,128 @@
+#modal-window
+	position absolute
+	left 0
+	right 0
+	top 0
+	bottom 0
+	transition all 1s ease-in-out
+	background rgba(0, 0, 0, 0)
+	z-index -1
+	section
+		position absolute
+		left 50%
+		top 50%
+		right 50%
+		bottom 50%
+		border-radius 2px
+		width 480px
+		height 290px
+		margin -150px 0 0 -250px
+		box-shadow -1px 1px 5px rgba(0, 0, 0, 0.4)
+		background white
+		transform scale(0.2)
+		transition all 1s ease-in-out
+		opacity 0
+		> *
+			position absolute
+			left 0
+			right 0
+		header
+			top 0
+			height 55px
+			line-height 55px
+			overflow hiden
+			font-size 18pt
+			font-weight 100
+			padding-left 10px
+		nav
+			top 10px
+			right 10px
+			li
+				list-style none
+				margin 5px
+				display inline-block
+				float right
+				font-size 12pt
+		article
+			overflow auto
+			top 70px
+			bottom 0
+			padding 0 20px 20px
+			& > div > div
+				overflow hidden
+				clear both
+				min-height 35px
+				position relative
+				label
+					height 35px
+					line-height 35px
+					float left
+				input, textarea
+					width 99%
+					margin 0
+					padding 5px 0
+					text-indent 5px
+					outline none
+					border solid 1px #ccc
+					box-shadow 0 0 15px rgba(0, 0, 0, 0.1) inset
+					color #444
+					transition all 0.5s ease-in-out
+				input, textarea
+					&:hover, &:active, &:focus
+						box-shadow none
+						color #111
+				textarea
+					height 50px
+				input[type='checkbox']
+					width auto
+					float right
+					box-shadow none
+					height 35px
+				input[type="button"]
+					position absolute
+					left 0
+					right 50%
+					border solid 1px #ccc
+					background linear-gradient(top, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.1) 100%)
+					background-color #fff
+					transition all 0.5s ease-in-out
+					top 0
+					bottom 0
+					width auto
+					&:hover
+						background-color #ccc
+					&:last-child
+						right 0
+						left 50%
+	&.fullscreen section
+		width 100%
+		height 100%
+		margin 0
+		left 0
+		top 0
+		bottom 0
+		right 0
+	
+			
+
+.modal-active
+	transform scale(0.9)
+	border-radius 2px
+	opacity 0.8
+	-webkit-filter blur(2px)
+	-moz-filter blur(2px)
+	-ms-filter blur(2px)
+	-o-filter blur(2px)
+	filter blur(2px)
+	~ #modal-container #modal-window
+		background rgba(0, 0, 0, 0.2)
+		z-index 1
+		section
+			transform scale(1)
+			opacity 1
+
+@media (max-width:320px) 
+	#modal-window section
+		width 300px
+		margin-left -150px
+

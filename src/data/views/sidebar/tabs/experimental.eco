@@ -1,0 +1,7 @@
+<h1 <%= _T "Experimental Features" %>></h1>
+<ul>
+	<li onclick="Toast('Example', 'With Content')"><p <%= _T "Activate a Toast" %>></p></li>
+	<li onclick="Notifications.toastNormal('Example', [ 'With Content' ])"><p <%= _T "Activate a Toast (Modal Override)" %>></p></li>
+	<li onclick="Modal.show({title: 'Some Title', content: 'Some Example Content'})"><p <%= _T "Open a modal window" %>></p></li>
+	<li onclick="Loading.start(); Loading.progress('I will turn off in 5 seconds!'); setTimeout(Loading.end, 5000)"><p <%= _T "Open the Loading Screen" %>></p></li>
+</ul>

@@ -1,0 +1,15 @@
+<% TABS = ["account", "applications", "devices", "develop"] %>
+<% ICONS = ["user", "list", "desktop", "code"] %>
+<div ng-controller="AppRouter" id="approuter-container">
+	<aside ng-class="{0: 'active'}[tabState]">
+		<h1><%= AppInfo.displayname %></h1>
+		<% for tab, index in TABS: %>
+			<li id='<%= tab %>' ng-click='this.runtime.set("active-tab", <%= index %>)' ng-class="{<%= index %>: 'active'}[activeTab]"><i class="icon-<%= ICONS[index] %>"></i><%= tab[0].toUpperCase() + tab.substr(1) %></li>
+		<% end %>
+	</aside>
+	<section ng-class="{1: 'active'}[tabState]">
+		<% for tab, index in TABS: %>
+		<article ng-class="{<%= index %>: 'active'}[activeTab]"><%- DepMan.render ["app", tab] %></article>
+		<% end %>
+	</section>
+</div>

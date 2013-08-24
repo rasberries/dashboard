@@ -1,0 +1,45 @@
+<div ng-controller="RecipeController" id="recipies-container">
+	<h1 <%= _T "Your Recipes" %>></h1>
+	<article ng-repeat="(uuid, recipe) in recipes">
+		<h2 ng-bind="recipe._id"></h2>
+		<nav>
+			<li ng-click="toggleEditing(recipe)"><i class="icon-wrench"></i></li>
+			<li ng-click="remove(recipe)"><i class="icon-remove"></i></li>
+		</nav>
+		<div ng-class="{true: 'active', false: 'inactive', undefined: 'inactive'}[recipe.editing]">
+			<label for="recipe-name-{{recipe._uuid}}">
+				<span <%= _T "The name of the recipe" %>></span>
+				<input type="text" id='recipe-name-{{recipe._uuid}}' ng-model="recipe._id" <%= _T "Recipe Name", "placeholder" %> >
+			</label>
+			<article ng-repeat="stub in recipe.data.stubs">
+				<label for="recipe-stub-{{recipe._uuid}}">
+					<span <%= _T "The URL of the dependency" %>></span>
+					<input type="text" id="recipe-stub-{{recipe._uuid}}" ng-model="stub.url" <%= _T "URL", "placeholder" %>>
+				</label>
+				<div class="instructions container">
+					<li ng-repeat="(index, instruction) in stub.instructions">
+						<label for="recipe-name-{{recipe._uuid}}-{{index}}">
+							<span><span <%= _T "Instruction number" %>></span> <span>{{index + 1}}</span></span>
+							<input type="text" id="recipe-name-{{recipe._uuid}}-{{index}}" ng-model="instruction.command" <%= _T "Instruction", "placeholder" %>>
+						</label>
+						<nav>
+							<li ng-click="removeInstruction(instruction, stub.instructions)"><i class="icon-remove"></i></li>
+						</nav>
+					</li>
+					<nav class="add">
+						<li ng-click="addInstruction(stub.instructions)"><i class="icon-plus"></i></li>
+					</nav>
+				</div>
+				<nav>
+					<li ng-click="removeStub(stub, recipe.data.stubs)"><i class="icon-remove"></i></li>
+				</nav>
+			</article>
+			<nav class="add">
+				<li ng-click="addStub(recipe.data.stubs)"><i class="icon-plus"></i></li>
+			</nav>
+		</div>
+	</article>
+	<nav class="add">
+		<li ng-click="addRecipe()"><i class="icon-plus"></i></li>
+	</nav>
+</div>

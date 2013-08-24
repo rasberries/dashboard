@@ -1,0 +1,35 @@
+{
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}

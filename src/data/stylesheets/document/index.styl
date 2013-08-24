@@ -1,0 +1,82 @@
+fix()
+	position absolute
+	left 0
+	right 0
+	top 0
+	bottom 0
+
+headersize()
+	height 45px
+	line-height 45px
+	font-size 14pt
+	font-weight 100
+
+radial(from, to)
+	background -moz-radial-gradient(center, ellipse cover, from 0%, to 100%)
+	background -webkit-gradient(radial, center center, 0px, center center, 100%, color-stop(0%,from), color-stop(100%,to)) 
+	background -webkit-radial-gradient(center, ellipse cover, from 0%,to 100%) 
+	background -o-radial-gradient(center, ellipse cover, from 0%,to 100%) 
+	background -ms-radial-gradient(center, ellipse cover, from 0%,to 100%) 
+	background radial-gradient(ellipse at center, from 0%,to 100%) 
+
+section#application #documentplaceholder > section > section
+	@import "grid"
+section#application #documentplaceholder
+	> section
+		fix()
+		perspective 200px
+		radial(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.4))
+		header
+			fix()
+			headersize()
+			bottom auto
+			padding-left 65px
+			background white
+			border-bottom solid 1px #ccc
+			box-shadow 0 0 5px rgba(0, 0, 0 , 0.2)
+			z-index 3
+			overflow hidden
+			transition all 0.75s ease-in-out
+			transition-delay 0.25s
+			nav
+				fix()
+				headersize()
+				left auto
+				li
+					float right
+					list-style none
+					padding 0 15px
+					display inline-block
+					color rgba(0, 0, 0, 0.4)
+					text-shadow 0 1px 1px white
+					transition all 0.5s ease-in-out
+					&:hover
+						color rgba(0, 0, 0, 0.8)
+					&.active
+						color black
+		> section
+			fix()
+			top 45px
+			backface-visibility hidden
+			background white
+			z-index 1
+			transition all 1s ease-in-out
+			transform rotateY(-90deg) translateX(-100%)
+			left -100%
+			right 100%
+			box-shadow 0 0 15px rgba(0, 0, 0, 0.8)
+			background white
+			&.active
+				left 0 !important
+				right 0 !important
+				transform none !important
+				z-index 2 !important
+			&:last-child
+				transform rotateY(90deg) translateX(100%)
+				right -100%
+				left 100%
+		&.sidebaropen
+			header
+				padding-left 265px
+				transition-duration 0.5s
+				transition-delay 0

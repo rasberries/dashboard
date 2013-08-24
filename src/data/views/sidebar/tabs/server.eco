@@ -1,0 +1,9 @@
+<h1 <%= _T "Connection Manager" %>></h1>
+<ul>
+	<li <%= _T "Reconnect" %> ng-click="Client.reconnect()"></li>
+</ul>
+<img id="client-qrcode" src="" alt="" class="qrcode" ng-click='verifyAndConnect()' />
+<ul>
+	<li><label for="self-client-id" <%= _T "Your Client ID" %>></label><input type="text" ng-model="Client.id" disabled id="self-client-id" /></li>
+	<li><label for="remote-client-id" <%= _T "Client ID to connect to" %>></label><input type="text"  id="remote-client-id" ng-model="clientid"/></li>
+</ul>

@@ -1,0 +1,30 @@
+<div ng-controller="AccountController">
+	<h1>Account Stuff</h1>
+	<div class="form">
+		<label for="account-name">
+			<span <%= _T "Name" %>></span>
+			<input type="text" id="account-name" ng-model="user.data.name" <%= _T "Name", "placeholder" %> ng-change="">
+		</label>
+		<hr>
+		<label for="account-email">
+			<span <%= _T "EMail" %>></span>
+			<input type="text" id="account-email" ng-model="user.data.email" <%= _T "EMail", "placeholder" %> ng-change="">
+		</label>
+		<hr>
+		<label for="account-password">
+			<span <%= _T "Current Password" %>></span>
+			<input type="password" id="account-password" ng-model="currentpass" <%= _T "Current Password", "placeholder" %> ng-change="">
+		</label>
+		<br>
+		<label for="account-new-password">
+			<span <%= _T "New Password" %>></span>
+			<input type="password" id="account-new-password" ng-model="newpass" <%= _T "New Password", "placeholder" %> ng-change="">
+		</label>
+		<br>
+		<label for="account-new-password-verify">
+			<span <%= _T "Verify the New Password" %>></span>
+			<input type="password" id="account-new-password-verify" ng-model="newpassverify" <%= _T "Verify the New Password", "placeholder" %> ng-change="">
+		</label>
+		<button <%= _T "Change Password" %> ng-click="changePassword()"></button>
+	</div>
+</div>

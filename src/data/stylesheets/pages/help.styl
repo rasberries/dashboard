@@ -1,0 +1,92 @@
+&#help
+	background rgba(0, 0, 0, 0.9)
+	z-index 3
+	transform translateY(-100%)
+	.dragger
+		background rgba(0, 0, 0, 0.8)
+		border-color black
+		color white
+		bottom 0
+		left 25px
+		border-bottom-right-radius 0
+		border-bottom-left-radius 0
+		border-bottom none
+	.wrapper
+		display table
+		width 100%
+		height 100%
+		text-align center
+		aside
+			position absolute
+			top 0
+			bottom 0
+			width 15%
+			transition all 0.5s ease-in-out
+			&.right
+				right 0
+			&.left
+				left 0
+			background rgba(256, 256, 256, 0.1)
+			&:hover
+				background rgba(256, 256, 256, 0.2)
+		nav
+			position absolute
+			top 70%
+			width 500px
+			left 50%
+			margin-left -250px
+			text-align center
+			li
+				display inline-block
+				width 0
+				height 0
+				border solid 5px rgba(256, 256, 256, 0.4)
+				border-radius 100%
+				margin 10px
+				transition all 0.5s ease-in-out
+				&:hover
+					border-color rgba(256, 256, 256, 0.6)
+				&.active
+					border-color white
+		section
+			position absolute
+			height 40%
+			top 20%
+			left 50%
+			margin-left -250px
+			width 500px
+			box-shadow 0 0 50px rgba(0, 0, 0, 0.1)
+			overflow hidden
+			border-radius 4px
+			perspective 200px
+			article
+				position absolute
+				left 0
+				right 0
+				top 0
+				bottom 0
+				padding 25px
+				color white
+				text-shadow 0 1px 1px black
+				transform translateX(-200%) rotateY(90deg)
+				transition all 1s ease-in-out
+				text-align left
+				text-indent 25px
+				box-shadow 0 0 50px rgba(100, 100, 100, 0.1) inset
+				&.active
+					transform translateX(0) rotateY(0)
+					background rgba(100, 100, 100, 0.1)
+					~ article
+						transform translateX(200%) rotateY(-90deg)
+				.key
+					display inline-block
+					background white
+					border solid 2px #aaa
+					border-top none
+					border-bottom-width 3px
+					border-radius 4px
+					color #444
+					text-shadow none
+					font-weight normal
+					text-indent 0
+					padding 2px 4px

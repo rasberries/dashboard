@@ -1,0 +1,174 @@
+> aside
+	display block
+	width 100%
+	height 100px
+	border solid 1px rgba(0, 0, 0, 0.2)
+	box-shadow 0 0 25px rgba(0, 0, 0, 0.2) inset
+	text-align center
+	position relative
+	line-height 100px
+	overflow hidden
+	i
+		font-size 100px
+		color rgba(0, 0, 0, 0.2)
+		transition all 0.5s ease-in-out
+	&:hover i
+		color rgba(0, 0, 0, 0.4)
+
+> article
+	*
+		transition all 0.25s ease-in-out
+	display block
+	margin 0 -1px
+	padding 0
+	transition all 0.5s ease-in-out
+	border-left solid 1px rgba(0, 0, 0, 0.2)
+	border-right solid 1px rgba(0, 0, 0, 0.2)
+	&.inactive
+		transform translateX(100%)
+		border none
+		aside
+			height 0
+	aside
+		> *
+			display block
+		height 45px
+		width 100%
+		transition all 0.5s ease-in-out
+		&#secondary
+			overflow 0
+			height 150px
+			margin-left 73px
+			background linear-gradient(left, rgba(256, 256, 256, 0.8) 0, rgba(256, 256, 256, 0.4) 100%)
+			&.inactive
+				height 0
+				margin 0 
+				opacity 0
+				z-index -1
+				padding 0
+			label
+				display block
+				position relative
+			label
+				span
+					left 0
+				div
+					right 0
+					left 0
+					input
+						border solid 1px #ccc
+				&:last-child
+					height 106px
+					div
+						left 0
+						right 0
+						top 0 
+						bottom 0
+						padding 25px
+						border solid 1px #ccc
+						border-bottom none
+						background white
+						textarea
+							height 100%
+							width 100%
+							margin 0
+							border none
+
+		position relative
+		nav
+			position absolute
+			top 0
+			bottom 0
+			left 0
+			&#primary
+				left auto
+				right 0
+			> *
+				float left
+				list-style none
+				width 35px
+				height 45px
+				line-height 45px
+				text-align center
+				border-right solid 1px rgba(0, 0, 0, 0.2)
+				background rgba(256, 256, 256, 0.8)
+				background linear-gradient(left, rgba(256, 256, 256, 0.8) 0, rgba(256, 256, 256, 0.4) 100%)
+				> label
+					display block
+					width 100%
+					height 100%
+				&:first-child
+					border-left solid 1px rgba(0, 0, 0, 0.2)
+				&.inactive
+					color transparent
+			input
+				display none
+		input
+			height 45px
+			width 100%
+			margin 0
+			border none
+			text-indent 25px
+			outline none
+			padding 0
+			border-radius 0
+			&[type='checkbox']
+				z-index -1
+				opacity 0
+				transform translateX(-1000%)
+		label 
+			height 45px
+			span
+				position absolute
+				height 25px
+				width auto
+				padding 0 10px
+				line-height 25px
+				bottom 0
+				left 73px
+				opacity 0
+				z-index -1
+				background #ccc
+				color black
+				text-shadow 0 1px 1px white
+				box-shadow 0 0 2px rgba(0, 0, 0, 0.5)
+			div 
+				position absolute
+				left 73px
+				right 109px
+			&:hover 
+				span
+					transform translateY(25px)
+					opacity 1
+					z-index 1
+				input
+					z-index 2
+
+	border-bottom solid 1px #ccc
+	background linear-gradient(top, rgba(0, 0, 0, 0.1) 0, rgba(0, 0, 0, 0.2) 100%)
+	.modal.button
+		display none
+
+&
+	overflow-y auto
+	overflow-x hidden
+
+@media (max-width:320px) 
+	nav > *
+		width 25px !important
+		height 35px !important
+		line-height 35px !important
+	.button
+		&.add, &.remove, &.showhide
+			display none
+		&.modal
+			display block !important
+			border-left solid 1px #ccc
+	input, label, aside#primary
+		height 35px !important
+	aside#primary div
+		right 26px
+		left 52px
+	article.inactive
+		aside#primary
+			height 0 !important

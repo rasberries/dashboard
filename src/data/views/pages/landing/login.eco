@@ -1,0 +1,8 @@
+<div class="container" id="login-form">
+	<h1 <%= _T "Login" %>></h1>
+	<div class="content">
+		<input type="text" id='login-email' <%= _T "EMail", "placeholder" %>>
+		<input type="password" id='login-password' <%= _T "Password", "placeholder" %>>
+		<button id='submit-button' <%= _T "Submit" %>></button>
+	</div>
+</div>

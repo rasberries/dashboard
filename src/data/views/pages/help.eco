@@ -1,0 +1,11 @@
+<section class="help wrapper" ng-controller="Help" ng-click="verifyState($event)">
+	<aside class="left" ng-click="changeState(-1)"></aside>
+	<section>
+		<article ng-repeat="doc in articles" ng-class="{true: 'active', false: ''}[$index == runtime.props['help-state']]" ng-bind-html-unsafe="doc">
+		</article>
+	</section>
+	<aside class="right" ng-click="changeState(1)"></aside>
+	<nav>
+		<li ng-repeat="article in articles" ng-click="runtime.set('help-state', $index)" ng-class="{true: 'active', false: ''}[$index == runtime.props['help-state']]"></li>
+	</nav>
+</section>
