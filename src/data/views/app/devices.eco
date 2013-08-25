@@ -1,7 +1,16 @@
-<div id="recipes-container" ng-controller="DevicesController">
+<div id="recipies-container" ng-controller="DevicesController">
 	<h1 <%= _T "Devices Management" %>></h1>
 	<input type="search" ng-model="searchTerms.data" <%= _T "Search", "placeholder" %>>
-	<article ng-repeat="recipe in recipeModel.recipes | filter:searchTerms">
-		<h2 ng-bind="recipe._id"></h2>
+	<article ng-repeat="(uuid, device) in user.devices | filter:searchTerms">
+		<h2 ng-bind="device.name"></h2>
+		<nav>
+			<li ng-click="remove(uuid)"><i class='icon-remove'></i></li>
+		</nav>
+		<textarea name="" id="">{{device.installed_apps.join("\n")}}</textarea>
+		<textarea name="" id="">{{device.app_stack.join("\n")}}</textarea>
 	</article>
+	<nav class="add">
+		<li ng-click="add()"><i class='icon-plus'></i></li>
+	</nav>
+	<input type="text" ng-model="info.device" ng-change="add()" <%= _T "Add", "placeholder" %>>
 </div>

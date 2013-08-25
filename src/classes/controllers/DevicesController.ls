@@ -1,5 +1,5 @@
 class DevicesController extends IS.Object
-	(@scope, @runtime, @recipe-model) ~> @get-model!config-scope!hook-events!
+	(@scope, @runtime, @recipe-model, @user) ~> @get-model!config-scope!hook-events!
 
 	config-scope: ~>
 		@safeApply = (fn) ~>
@@ -14,4 +14,4 @@ class DevicesController extends IS.Object
 	get-model: ~> @recipe-model.controller = @; @
 	hook-events: ~>
 
-angular.module AppInfo.displayname .controller "DevicesController", ["$scope", "Runtime", "Recipe", DevicesController]
+angular.module AppInfo.displayname .controller "DevicesController", ["$scope", "Runtime", "Recipe", "User", DevicesController]
