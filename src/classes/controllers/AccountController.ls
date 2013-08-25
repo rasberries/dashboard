@@ -1,5 +1,5 @@
 class AccountController extends IS.Object
-	(@scope, @runtime, @user-model) ~> @get-model!config-scope!hook-events!
+	(@scope, @runtime, @user) ~> @get-model!config-scope!hook-events!
 
 	config-scope: ~>
 		@safeApply = (fn) ~>
@@ -11,7 +11,7 @@ class AccountController extends IS.Object
 		@scope <<< @
 		@
 
-	get-model: ~> @user = new @user-model; @
+	get-model: ~> @
 
 	hook-events: ~>
 		$ '#account-name' .change ~> @user.send \name

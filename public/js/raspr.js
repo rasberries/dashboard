@@ -279,6 +279,8 @@
       DepMan.controller("AppRouter");
       DepMan.controller("AccountController");
       DepMan.controller("RecipeController");
+      DepMan.controller("ApplicationsController");
+      DepMan.controller("DevicesController");
       DepMan.model("UserModel");
       return angular.bootstrap(document.body, [AppInfo.displayname]);
     };
@@ -350,11 +352,11 @@
   var AccountController;
   AccountController = (function(superclass){
     var prototype = extend$((import$(AccountController, superclass).displayName = 'AccountController', AccountController), superclass).prototype, constructor = AccountController;
-    function AccountController(scope, runtime, userModel){
+    function AccountController(scope, runtime, user){
       var this$ = this instanceof ctor$ ? this : new ctor$;
       this$.scope = scope;
       this$.runtime = runtime;
-      this$.userModel = userModel;
+      this$.user = user;
       this$.verifyNewPasswords = bind$(this$, 'verifyNewPasswords', prototype);
       this$.changePassword = bind$(this$, 'changePassword', prototype);
       this$.hookEvents = bind$(this$, 'hookEvents', prototype);
@@ -380,7 +382,6 @@
       return this;
     };
     prototype.getModel = function(){
-      this.user = new this.userModel;
       return this;
     };
     prototype.hookEvents = function(){
@@ -528,6 +529,128 @@
     return AppRouter;
   }(IS.Object));
   angular.module(AppInfo.displayname).controller("AppRouter", ["$scope", "Runtime", AppRouter]);
+  function bind$(obj, key, target){
+    return function(){ return (target || obj)[key].apply(obj, arguments) };
+  }
+  function extend$(sub, sup){
+    function fun(){} fun.prototype = (sub.superclass = sup).prototype;
+    (sub.prototype = new fun).constructor = sub;
+    if (typeof sup.extended == 'function') sup.extended(sub);
+    return sub;
+  }
+  function import$(obj, src){
+    var own = {}.hasOwnProperty;
+    for (var key in src) if (own.call(src, key)) obj[key] = src[key];
+    return obj;
+  }
+}).call(this);
+}, "classes/controllers/ApplicationsController": function(exports, require, module) {(function(){
+  var ApplicationsController;
+  ApplicationsController = (function(superclass){
+    var prototype = extend$((import$(ApplicationsController, superclass).displayName = 'ApplicationsController', ApplicationsController), superclass).prototype, constructor = ApplicationsController;
+    function ApplicationsController(scope, runtime, recipeModel, user){
+      var this$ = this instanceof ctor$ ? this : new ctor$;
+      this$.scope = scope;
+      this$.runtime = runtime;
+      this$.recipeModel = recipeModel;
+      this$.user = user;
+      this$.installApp = bind$(this$, 'installApp', prototype);
+      this$.getModel = bind$(this$, 'getModel', prototype);
+      this$.configScope = bind$(this$, 'configScope', prototype);
+      this$.getModel().configScope();
+      return this$;
+    } function ctor$(){} ctor$.prototype = prototype;
+    prototype.configScope = function(){
+      var this$ = this;
+      this.info = {
+        device: null
+      };
+      this.safeApply = function(fn){
+        var phase;
+        phase = this$.scope.$parent.$$phase;
+        if (phase === "$apply" || phase === "$digest") {
+          if (fn && typeof fn === 'function') {
+            return fn();
+          }
+        } else {
+          return this$.scope.$apply(fn);
+        }
+      };
+      import$(this.scope, this);
+      return this;
+    };
+    prototype.getModel = function(){
+      this.recipeModel.controller = this;
+      return this;
+    };
+    prototype.installApp = function(recipe){
+      Client.post("devices/stack_app", {
+        uuid: this.info.device.uuid,
+        app_id: UserModel.data.mail + "$" + recipe._id
+      }, function(){
+        return Toast("Success", "App queued to install on device");
+      }, function(){
+        return Toast("Error", "Failed to queue app for install");
+      });
+      return this.info.device = null;
+    };
+    return ApplicationsController;
+  }(IS.Object));
+  angular.module(AppInfo.displayname).controller("ApplicationsController", ["$scope", "Runtime", "Recipe", "User", ApplicationsController]);
+  function bind$(obj, key, target){
+    return function(){ return (target || obj)[key].apply(obj, arguments) };
+  }
+  function extend$(sub, sup){
+    function fun(){} fun.prototype = (sub.superclass = sup).prototype;
+    (sub.prototype = new fun).constructor = sub;
+    if (typeof sup.extended == 'function') sup.extended(sub);
+    return sub;
+  }
+  function import$(obj, src){
+    var own = {}.hasOwnProperty;
+    for (var key in src) if (own.call(src, key)) obj[key] = src[key];
+    return obj;
+  }
+}).call(this);
+}, "classes/controllers/DevicesController": function(exports, require, module) {(function(){
+  var DevicesController;
+  DevicesController = (function(superclass){
+    var prototype = extend$((import$(DevicesController, superclass).displayName = 'DevicesController', DevicesController), superclass).prototype, constructor = DevicesController;
+    function DevicesController(scope, runtime, recipeModel){
+      var this$ = this instanceof ctor$ ? this : new ctor$;
+      this$.scope = scope;
+      this$.runtime = runtime;
+      this$.recipeModel = recipeModel;
+      this$.hookEvents = bind$(this$, 'hookEvents', prototype);
+      this$.getModel = bind$(this$, 'getModel', prototype);
+      this$.configScope = bind$(this$, 'configScope', prototype);
+      this$.getModel().configScope().hookEvents();
+      return this$;
+    } function ctor$(){} ctor$.prototype = prototype;
+    prototype.configScope = function(){
+      var this$ = this;
+      this.safeApply = function(fn){
+        var phase;
+        phase = this$.scope.$parent.$$phase;
+        if (phase === "$apply" || phase === "$digest") {
+          if (fn && typeof fn === 'function') {
+            return fn();
+          }
+        } else {
+          return this$.scope.$apply(fn);
+        }
+      };
+      import$(this.scope, this);
+      return this;
+    };
+    prototype.getModel = function(){
+      this.recipeModel.controller = this;
+      return this;
+    };
+    prototype.hookEvents = function(){};
+    return DevicesController;
+  }(IS.Object));
+  angular.module(AppInfo.displayname).controller("DevicesController", ["$scope", "Runtime", "Recipe", DevicesController]);
   function bind$(obj, key, target){
     return function(){ return (target || obj)[key].apply(obj, arguments) };
   }
@@ -1689,30 +1812,12 @@
       return import$(this.scope, this);
     };
     prototype.initRuntime = function(){
-      return this.runtime.init("app-state", 'number');
+      this.runtime.init("app-state", 'number');
+      return this.runtime.subscribe("prop-app-state-change", this.safeApply);
     };
     prototype.getStored = function(){
-      var this$ = this;
-      this.prevState = States['landing'];
-      DBStorage.get("app-state", function(state){
-        this$.prevState = parseInt(state) || States['landing'];
-        this$.runtime.set("app-state", this$.prevState);
-        return this$.safeApply();
-      });
-      return this.runtime.subscribe("prop-app-state-change", function(value){
-        switch (value) {
-        case States['landing']:
-          DBStorage.set("app-state", States['landing']);
-          this$.log("State changed, switching to landing next time!");
-          break;
-        default:
-          if (this$.prevState === States['landing']) {
-            DBStorage.set("app-state", States['application']);
-            this$.log("State changed, switching to app next time!");
-          }
-        }
-        return this$.prevState = value;
-      });
+      this.runtime.set("app-state", States.landing);
+      return this.safeApply();
     };
     prototype.getBodyState = function(){
       return STATES[this.runtime.get("app-state")];
@@ -1779,7 +1884,6 @@
       return this;
     };
     prototype.getModel = function(){
-      this.recipes = this.recipeModel._reccords;
       this.recipeModel.controller = this;
       return this;
     };
@@ -1790,7 +1894,13 @@
       return setTimeout(LanguageHelper._translateAll, 50);
     };
     prototype.remove = function(recipe){
-      this.log(this.recipes, recipe);
+      Client.post("apps/remove", {
+        id: UserModel.data.mail + "$" + recipe.data.name
+      }, function(){
+        return Toast("Success", "Removed Successfuly");
+      }, function(){
+        return Toast("Error", "Something went wrong");
+      });
       delete this.recipes[recipe._uuid];
       return this.safeApply();
     };
@@ -1798,7 +1908,8 @@
       return this.recipeModel['new']();
     };
     prototype.addStub = function(to){
-      to.push({
+      to.stubs == null && (to.stubs = []);
+      to.stubs.push({
         url: "http://github.com/rasberries/",
         instructions: []
       });
@@ -2766,6 +2877,7 @@
     var prototype = extend$((import$(Client, superclass).displayName = 'Client', Client), superclass).prototype, constructor = Client;
     function Client(){
       var this$ = this instanceof ctor$ ? this : new ctor$;
+      this$.register = bind$(this$, 'register', prototype);
       this$.login = bind$(this$, 'login', prototype);
       this$.post = bind$(this$, 'post', prototype);
       this$.request = bind$(this$, 'request', prototype);
@@ -2781,8 +2893,14 @@
         error: errorcb
       });
     };
-    prototype.post = function(something, data, callback){
-      return $.post(something, data, callback);
+    prototype.post = function(something, data, successcb, errorcb){
+      return $.ajax({
+        type: "post",
+        url: this.config.rootUrl + "api/" + something,
+        data: data,
+        success: successcb,
+        error: errorcb
+      });
     };
     prototype.login = function(data, cb){
       var this$ = this;
@@ -2791,6 +2909,18 @@
         return cb();
       }, function(){
         return Toast("Error", "The mail/pass combination was a total fuckup");
+      });
+    };
+    prototype.register = function(data, cb){
+      var this$ = this;
+      return this.post("users/register", {
+        mail: data.mail,
+        password: data.pass
+      }, function(){
+        Toast("Success", "It worked! New account has been created!");
+        return cb();
+      }, function(){
+        return Toast("Error", "The account could not be created");
       });
     };
     return Client;
@@ -18565,7 +18695,140 @@ QRBitBuffer.prototype = {
 
         this.length++;
     }
-};}, "classes/models/Document": function(exports, require, module) {(function(){
+};}, "classes/models/AppModel": function(exports, require, module) {(function(){
+  var __blankData__, RecipeModel;
+  __blankData__ = {
+    description: "something",
+    stubs: []
+  };
+  RecipeModel = (function(superclass){
+    var prototype = extend$((import$(RecipeModel, superclass).displayName = 'RecipeModel', RecipeModel), superclass).prototype, constructor = RecipeModel;
+    RecipeModel.extend(IS.Modules.ORM);
+    RecipeModel.init = function(runtime){
+      RecipeModel.runtime = runtime;
+      window.RecipeRepo = RecipeModel;
+      RecipeModel.runtime.subscribe("prop-active-tab-change", function(){
+        if (RecipeModel.runtime.props['active-tab'] === 3) {
+          return RecipeModel.refresh();
+        }
+      });
+      RecipeModel.runtime.subscribe("prop-app-state-change", function(){
+        if (RecipeModel.runtime.props['app-state'] === 1) {
+          return RecipeModel.refresh();
+        }
+      });
+      RecipeModel.refresh();
+      return RecipeModel;
+    };
+    RecipeModel.refresh = function(){
+      var onsuccess, onerror;
+      onsuccess = function(list){
+        var ref$, i$, len$, item;
+        RecipeModel.list = list;
+        RecipeModel.log(RecipeModel.list);
+        RecipeModel._reccords = {};
+        if ((ref$ = RecipeModel.controller) != null) {
+          ref$.recipes = RecipeModel._reccords;
+        }
+        for (i$ = 0, len$ = (ref$ = RecipeModel.list).length; i$ < len$; ++i$) {
+          item = ref$[i$];
+          (fn$.call(RecipeModel, item, item));
+        }
+        RecipeModel.log(RecipeModel.controller);
+        return (ref$ = RecipeModel.controller) != null ? ref$.safeApply() : void 8;
+        function fn$(i, item){
+          var x, ref$;
+          if (i._id) {
+            delete i._id;
+          }
+          x = this.create(i.name, item);
+          x._id = i.name;
+          (ref$ = x.data).stubs == null && (ref$.stubs = []);
+        }
+      };
+      onerror = function(){
+        return Toast("Error", "Could not get the list of stuff!");
+      };
+      if (!((typeof UserModel == 'undefined' || UserModel === null) || UserModel.data == null || UserModel.data.mail == null)) {
+        return Client.request("users/" + UserModel.data.mail + "/apps", onsuccess, onerror);
+      }
+    };
+    prototype.init = function(data){
+      this.data = data;
+      return this.data.name = this._id;
+    };
+    prototype.edit = function(something, into){
+      if (!!this.data[something]) {
+        this.data[something] = into;
+        return this.send(something);
+      }
+    };
+    prototype.send = function(something){
+      return this.log("Should send '" + something + "' [" + this.data[something] + "]");
+    };
+    prototype.getData = function(){
+      var onsuccess, onerror, this$ = this;
+      onsuccess = function(data){
+        this$.data = data;
+      };
+      onerror = function(){
+        return Toast("Error", "Could not get the full recipe!");
+      };
+      if (!((typeof UserModel == 'undefined' || UserModel === null) || UserModel.data == null || UserModel.data.mail == null)) {
+        return Client.request("apps/" + this.data.id, onsuccess, onerror);
+      }
+    };
+    prototype.save = function(){
+      var onsuccess, onerror, data, this$ = this;
+      onsuccess = function(){
+        return Toast("Success", "The data was saved!");
+      };
+      onerror = function(){
+        return Toast("Error", "Could not save the data!");
+      };
+      if (!((typeof UserModel == 'undefined' || UserModel === null) || UserModel.data == null || UserModel.data.mail == null)) {
+        data = {};
+        import$(data, this.data);
+        data.author = UserModel.data.mail;
+        data.id = UserModel.data.mail + ":" + data.name;
+        if (data._id) {
+          delete data._id;
+        }
+        return Client.post("apps/update/", data, onsuccess, onerror);
+      }
+    };
+    RecipeModel['new'] = function(){
+      var x;
+      x = RecipeModel.reuse("New Recipe", __blankData__);
+      return x._id = "New Recipe";
+    };
+    function RecipeModel(){
+      this.save = bind$(this, 'save', prototype);
+      this.getData = bind$(this, 'getData', prototype);
+      this.send = bind$(this, 'send', prototype);
+      this.edit = bind$(this, 'edit', prototype);
+      this.init = bind$(this, 'init', prototype);
+      RecipeModel.superclass.apply(this, arguments);
+    }
+    return RecipeModel;
+  }(IS.Object));
+  angular.module(AppInfo.displayname).factory("Recipe", ["Runtime", RecipeModel.init]);
+  function bind$(obj, key, target){
+    return function(){ return (target || obj)[key].apply(obj, arguments) };
+  }
+  function extend$(sub, sup){
+    function fun(){} fun.prototype = (sub.superclass = sup).prototype;
+    (sub.prototype = new fun).constructor = sub;
+    if (typeof sup.extended == 'function') sup.extended(sub);
+    return sub;
+  }
+  function import$(obj, src){
+    var own = {}.hasOwnProperty;
+    for (var key in src) if (own.call(src, key)) obj[key] = src[key];
+    return obj;
+  }
+}).call(this);
+}, "classes/models/Document": function(exports, require, module) {(function(){
   var DocumentModel;
   DocumentModel = (function(superclass){
     var prototype = extend$((import$(DocumentModel, superclass).displayName = 'DocumentModel', DocumentModel), superclass).prototype, constructor = DocumentModel;
@@ -18880,45 +19143,7 @@ QRBitBuffer.prototype = {
   }
 }).call(this);
 }, "classes/models/RecipeModel": function(exports, require, module) {(function(){
-  var __dummyData__, __dummyList__, __blankData__, RecipeModel;
-  __dummyData__ = {
-    "NPM": {
-      name: "NPM",
-      description: "Install NPM",
-      author: "sabinmarcu@gmail.com",
-      stubs: [{
-        url: "http://npmjs.org/install.sh",
-        instructions: ["sh install.sh"]
-      }]
-    },
-    "Node": {
-      name: "Node",
-      description: "Install Node.JS",
-      author: "sabinmarcu@gmail.com",
-      stubs: [
-        {
-          url: "http://nodejs.org/install.tar.gz",
-          instructions: [
-            {
-              command: "tar -xvzf install.tar.gz"
-            }, {
-              command: "cd install"
-            }, {
-              command: "./configure"
-            }, {
-              command: "make"
-            }, {
-              command: "make install"
-            }
-          ]
-        }, {
-          url: "sabinmarcu@gmail.com/NPM",
-          instructions: []
-        }
-      ]
-    }
-  };
-  __dummyList__ = ['NPM', 'Node'];
+  var __blankData__, RecipeModel;
   __blankData__ = {
     description: "something",
     stubs: []
@@ -18926,23 +19151,68 @@ QRBitBuffer.prototype = {
   RecipeModel = (function(superclass){
     var prototype = extend$((import$(RecipeModel, superclass).displayName = 'RecipeModel', RecipeModel), superclass).prototype, constructor = RecipeModel;
     RecipeModel.extend(IS.Modules.ORM);
-    RecipeModel.init = function(list){
-      var ref$, i$, len$, item, results$ = [];
-      RecipeModel.list = list != null ? list : __dummyList__;
+    RecipeModel.init = function(runtime){
+      var all;
+      RecipeModel.runtime = runtime;
       window.RecipeRepo = RecipeModel;
-      RecipeModel._reccords = {};
-      if ((ref$ = RecipeModel.controller) != null) {
-        ref$.recipes = RecipeModel._reccords;
-      }
-      for (i$ = 0, len$ = (ref$ = RecipeModel.list).length; i$ < len$; ++i$) {
-        item = ref$[i$];
-        results$.push((fn$.call(RecipeModel, item, item)));
-      }
-      return results$;
-      function fn$(i, item){
-        var x;
-        x = this.reuse(i, __blankData__);
-        return x._id = i;
+      all = true;
+      RecipeModel.runtime.subscribe("prop-active-tab-change", function(){
+        switch (RecipeModel.runtime.props['active-tab']) {
+        case 3:
+          return RecipeModel.refresh();
+        case 1:
+          return RecipeModel.refresh(all);
+        }
+      });
+      RecipeModel.runtime.subscribe("prop-app-state-change", function(){
+        if (RecipeModel.runtime.props['app-state'] === 1) {
+          switch (RecipeModel.runtime.props['active-tab']) {
+          case 3:
+            return RecipeModel.refresh();
+          case 1:
+            return RecipeModel.refresh(all);
+          }
+        }
+      });
+      return RecipeModel;
+    };
+    RecipeModel.refresh = function(all){
+      var onsuccess, onerror;
+      all == null && (all = false);
+      onsuccess = function(list){
+        var ref$, i$, len$, item;
+        RecipeModel.list = list;
+        RecipeModel.log(RecipeModel.list);
+        RecipeModel._reccords = {};
+        if ((ref$ = RecipeModel.controller) != null) {
+          ref$.recipes = RecipeModel._reccords;
+        }
+        RecipeModel.recipes = [];
+        for (i$ = 0, len$ = (ref$ = RecipeModel.list).length; i$ < len$; ++i$) {
+          item = ref$[i$];
+          (fn$.call(RecipeModel, item, item));
+        }
+        return (ref$ = RecipeModel.controller) != null ? ref$.safeApply() : void 8;
+        function fn$(i, item){
+          var x, ref$;
+          if (i._id) {
+            delete i._id;
+          }
+          x = this.create(i.name, item);
+          x._id = i.name;
+          (ref$ = x.data).stubs == null && (ref$.stubs = []);
+          this.recipes.push(x);
+        }
+      };
+      onerror = function(){
+        return Toast("Error", "Could not get the list of stuff!");
+      };
+      if (!((typeof UserModel == 'undefined' || UserModel === null) || UserModel.data == null || UserModel.data.mail == null)) {
+        if (all) {
+          return Client.request("apps", onsuccess, onerror);
+        } else {
+          return Client.request("users/" + UserModel.data.mail + "/apps", onsuccess, onerror);
+        }
       }
     };
     prototype.init = function(data){
@@ -18959,15 +19229,45 @@ QRBitBuffer.prototype = {
       return this.log("Should send '" + something + "' [" + this.data[something] + "]");
     };
     prototype.getData = function(){
-      this.data = __dummyData__[this._id] || this.data;
-      return this.log("Should get them online");
+      var onsuccess, onerror, this$ = this;
+      onsuccess = function(data){
+        this$.data = data;
+      };
+      onerror = function(){
+        return Toast("Error", "Could not get the full recipe!");
+      };
+      if (!((typeof UserModel == 'undefined' || UserModel === null) || UserModel.data == null || UserModel.data.mail == null)) {
+        return Client.request("apps/" + this.data.id, onsuccess, onerror);
+      }
+    };
+    prototype.save = function(){
+      var onsuccess, onerror, data, this$ = this;
+      onsuccess = function(){
+        return Toast("Success", "The data was saved!");
+      };
+      onerror = function(){
+        return Toast("Error", "Could not save the data!");
+      };
+      if (!((typeof UserModel == 'undefined' || UserModel === null) || UserModel.data == null || UserModel.data.mail == null)) {
+        data = {};
+        import$(data, this.data);
+        data.author = UserModel.data.mail;
+        data.id = UserModel.data.mail + "$" + data.name;
+        if (data._id) {
+          delete data._id;
+        }
+        return Client.post("apps/update/", data, onsuccess, onerror);
+      }
     };
     RecipeModel['new'] = function(){
       var x;
-      x = RecipeModel.reuse("New Recipe", __blankData__);
-      return x._id = "New Recipe";
+      x = RecipeModel.create("New Recipe", __blankData__);
+      x._id = "New Recipe";
+      RecipeModel.recipes == null && (RecipeModel.recipes = []);
+      return RecipeModel.recipes.push(x);
     };
     function RecipeModel(){
+      this.save = bind$(this, 'save', prototype);
       this.getData = bind$(this, 'getData', prototype);
       this.send = bind$(this, 'send', prototype);
       this.edit = bind$(this, 'edit', prototype);
@@ -18976,10 +19276,7 @@ QRBitBuffer.prototype = {
     }
     return RecipeModel;
   }(IS.Object));
-  RecipeModel.init();
-  angular.module(AppInfo.displayname).factory("Recipe", function(){
-    return RecipeModel;
-  });
+  angular.module(AppInfo.displayname).factory("Recipe", ["Runtime", RecipeModel.init]);
   function bind$(obj, key, target){
     return function(){ return (target || obj)[key].apply(obj, arguments) };
   }
@@ -18999,8 +19296,9 @@ QRBitBuffer.prototype = {
   var UserModel;
   UserModel = (function(superclass){
     var prototype = extend$((import$(UserModel, superclass).displayName = 'UserModel', UserModel), superclass).prototype, constructor = UserModel;
-    function UserModel(){
-      var form, loginFunc, this$ = this instanceof ctor$ ? this : new ctor$;
+    function UserModel(runtime){
+      var form, loginFunc, regform, registerFunc, this$ = this instanceof ctor$ ? this : new ctor$;
+      this$.runtime = runtime;
       this$.verifyEmail = bind$(this$, 'verifyEmail', prototype);
       this$.verifyPassword = bind$(this$, 'verifyPassword', prototype);
       this$.send = bind$(this$, 'send', prototype);
@@ -19015,15 +19313,67 @@ QRBitBuffer.prototype = {
         };
         if (data.mail !== "" && data.pass !== "") {
           return Client.login(data, function(){
+            var onsuccess, onerror;
             this$.data = data;
+            this$.runtime.set('app-state', 1);
             form.find('#login-email').val("");
-            return form.find('#login-password').val("");
+            form.find('#login-password').val("");
+            onsuccess = function(list){
+              var i$, ref$, len$, device, results$ = [];
+              this$.data.devices = list[0].user_devices.filter(function(e, pos, self){
+                return self.indexOf(e) === pos;
+              });
+              this$.devices = {};
+              for (i$ = 0, len$ = (ref$ = this$.data.devices).length; i$ < len$; ++i$) {
+                device = ref$[i$];
+                results$.push((fn$.call(this$, device, device)));
+              }
+              return results$;
+              function fn$(d, device){
+                var this$ = this;
+                return Client.request("devices/" + d, function(it){
+                  return this$.devices[d] = it;
+                }, function(){
+                  return Toast("Error", "Could not get info about " + d + " device");
+                });
+              }
+            };
+            onerror = function(){
+              return Toast("Error", "Could not grab the devices list.");
+            };
+            return Client.request("users/devices/" + this$.data.mail, onsuccess, onerror);
           });
+        }
+      };
+      regform = $('#register-form');
+      registerFunc = function(){
+        var data;
+        data = {
+          mail: regform.find('#register-email').val(),
+          pass: regform.find('#register-pass').val(),
+          verpass: regform.find('#register-pass-verify').val()
+        };
+        this$.log(data);
+        if (data.mail !== "" && data.pass !== "" && data.verpass !== "") {
+          if (data.pass !== data.verpass) {
+            return Toast("Error", "The two passwords were different");
+          } else {
+            return Client.register(data, function(){
+              regform.find('#register-email').val("");
+              regform.find('#register-pass').val("");
+              return regform.find('#register-pass-verify').val("");
+            });
+          }
         }
       };
       form.find('#submit-button').click(loginFunc);
       form.find('#login-email').change(loginFunc);
       form.find('#login-password').change(loginFunc);
+      regform.find('#submit-button').click(registerFunc);
+      regform.find('#register-email').change(registerFunc);
+      regform.find('#register-pass').change(registerFunc);
+      regform.find('#register-pass-verify').change(registerFunc);
+      this$;
       return this$;
     } function ctor$(){} ctor$.prototype = prototype;
     prototype.edit = function(something, into){
@@ -19043,7 +19393,7 @@ QRBitBuffer.prototype = {
     };
     return UserModel;
   }(IS.Object));
-  angular.module(AppInfo.displayname).value("User", UserModel);
+  angular.module(AppInfo.displayname).service("User", ["Runtime", UserModel]);
   function bind$(obj, key, target){
     return function(){ return (target || obj)[key].apply(obj, arguments) };
   }
@@ -19614,11 +19964,15 @@ return window.JSONImport['ro-RO'] = module.exports = item;}, "data/stylesheets/f
   }
   (function() {
     (function() {
-      __out.push('<h1 ');
+      __out.push('<div id="recipies-container" ng-controller="ApplicationsController">\n\t<h1 ');
     
       __out.push(__sanitize(_T("Applications")));
     
-      __out.push('></h1>');
+      __out.push('></h1>\n\t<input type="search" ng-model="searchTerms.data" ');
+    
+      __out.push(__sanitize(_T("Search", "placeholder")));
+    
+      __out.push('>\n\t<article ng-repeat="recipe in recipeModel.recipes | filter:searchTerms" ng-show="runtime.props[\'active-tab\'] == 1">\n\t\t<h2 ng-bind="recipe._id"></h2>\n\t\t<select ng-change="installApp(recipe)" ng-model="info.device" ng-options="device.name for (key, device) in user.devices"></select>\n\t</article>\n</div>ac');
     
     }).call(this);
     
@@ -19668,7 +20022,11 @@ return window.JSONImport['ro-RO'] = module.exports = item;}, "data/stylesheets/f
     
       __out.push(__sanitize(_T("Your Recipes")));
     
-      __out.push('></h1>\n\t<article ng-repeat="(uuid, recipe) in recipes">\n\t\t<h2 ng-bind="recipe._id"></h2>\n\t\t<nav>\n\t\t\t<li ng-click="toggleEditing(recipe)"><i class="icon-wrench"></i></li>\n\t\t\t<li ng-click="remove(recipe)"><i class="icon-remove"></i></li>\n\t\t</nav>\n\t\t<div ng-class="{true: \'active\', false: \'inactive\', undefined: \'inactive\'}[recipe.editing]">\n\t\t\t<label for="recipe-name-{{recipe._uuid}}">\n\t\t\t\t<span ');
+      __out.push('></h1>\n\t<input type="search" ng-model="searchTerms.data" ');
+    
+      __out.push(__sanitize(_T("Search", "placeholder")));
+    
+      __out.push('>\n\t<article ng-repeat="recipe in recipeModel.recipes | filter:searchTerms" ng-show="runtime.props[\'active-tab\'] == 3">\n\t\t<h2 ng-bind="recipe._id"></h2>\n\t\t<nav>\n\t\t\t<li ng-click="toggleEditing(recipe)"><i class="icon-wrench"></i></li>\n\t\t\t<li ng-click="remove(recipe)"><i class="icon-remove"></i></li>\n\t\t</nav>\n\t\t<div ng-class="{true: \'active\', false: \'inactive\', undefined: \'inactive\'}[recipe.editing]">\n\t\t\t<label for="recipe-name-{{recipe._uuid}}">\n\t\t\t\t<span ');
     
       __out.push(__sanitize(_T("The name of the recipe")));
     
@@ -19676,7 +20034,7 @@ return window.JSONImport['ro-RO'] = module.exports = item;}, "data/stylesheets/f
     
       __out.push(__sanitize(_T("Recipe Name", "placeholder")));
     
-      __out.push(' >\n\t\t\t</label>\n\t\t\t<article ng-repeat="stub in recipe.data.stubs">\n\t\t\t\t<label for="recipe-stub-{{recipe._uuid}}">\n\t\t\t\t\t<span ');
+      __out.push(' ng-change="recipe.data.name = recipe._id" >\n\t\t\t</label>\n\t\t\t<article ng-repeat="stub in recipe.data.stubs">\n\t\t\t\t<label for="recipe-stub-{{recipe._uuid}}">\n\t\t\t\t\t<span ');
     
       __out.push(__sanitize(_T("The URL of the dependency")));
     
@@ -19692,7 +20050,11 @@ return window.JSONImport['ro-RO'] = module.exports = item;}, "data/stylesheets/f
     
       __out.push(__sanitize(_T("Instruction", "placeholder")));
     
-      __out.push('>\n\t\t\t\t\t\t</label>\n\t\t\t\t\t\t<nav>\n\t\t\t\t\t\t\t<li ng-click="removeInstruction(instruction, stub.instructions)"><i class="icon-remove"></i></li>\n\t\t\t\t\t\t</nav>\n\t\t\t\t\t</li>\n\t\t\t\t\t<nav class="add">\n\t\t\t\t\t\t<li ng-click="addInstruction(stub.instructions)"><i class="icon-plus"></i></li>\n\t\t\t\t\t</nav>\n\t\t\t\t</div>\n\t\t\t\t<nav>\n\t\t\t\t\t<li ng-click="removeStub(stub, recipe.data.stubs)"><i class="icon-remove"></i></li>\n\t\t\t\t</nav>\n\t\t\t</article>\n\t\t\t<nav class="add">\n\t\t\t\t<li ng-click="addStub(recipe.data.stubs)"><i class="icon-plus"></i></li>\n\t\t\t</nav>\n\t\t</div>\n\t</article>\n\t<nav class="add">\n\t\t<li ng-click="addRecipe()"><i class="icon-plus"></i></li>\n\t</nav>\n</div>');
+      __out.push('>\n\t\t\t\t\t\t</label>\n\t\t\t\t\t\t<nav>\n\t\t\t\t\t\t\t<li ng-click="removeInstruction(instruction, stub.instructions)"><i class="icon-remove"></i></li>\n\t\t\t\t\t\t</nav>\n\t\t\t\t\t</li>\n\t\t\t\t\t<nav class="add">\n\t\t\t\t\t\t<li ng-click="addInstruction(stub.instructions)"><i class="icon-plus"></i></li>\n\t\t\t\t\t</nav>\n\t\t\t\t</div>\n\t\t\t\t<nav>\n\t\t\t\t\t<li ng-click="removeStub(stub, recipe.data.stubs)"><i class="icon-remove"></i></li>\n\t\t\t\t</nav>\n\t\t\t</article>\n\t\t\t<nav class="add">\n\t\t\t\t<li ng-click="addStub(recipe.data)"><i class="icon-plus"></i></li>\n\t\t\t</nav>\n\t\t\t<button class="save" ng-click=\'recipe.save()\' ');
+    
+      __out.push(__sanitize(_T("Save")));
+    
+      __out.push('></button>\n\t\t</div>\n\t</article>\n\t<nav class="add">\n\t\t<li ng-click="addRecipe()"><i class="icon-plus"></i></li>\n\t</nav>\n</div>');
     
     }).call(this);
     
@@ -19738,11 +20100,15 @@ return window.JSONImport['ro-RO'] = module.exports = item;}, "data/stylesheets/f
   }
   (function() {
     (function() {
-      __out.push('<h1 ');
+      __out.push('<div id="recipes-container" ng-controller="DevicesController">\n\t<h1 ');
     
       __out.push(__sanitize(_T("Devices Management")));
     
-      __out.push('></h1>');
+      __out.push('></h1>\n\t<input type="search" ng-model="searchTerms.data" ');
+    
+      __out.push(__sanitize(_T("Search", "placeholder")));
+    
+      __out.push('>\n\t<article ng-repeat="recipe in recipeModel.recipes | filter:searchTerms">\n\t\t<h2 ng-bind="recipe._id"></h2>\n\t</article>\n</div>');
     
     }).call(this);
     
@@ -20650,7 +21016,7 @@ return window.JSONImport['ro-RO'] = module.exports = item;}, "data/stylesheets/f
   }
   (function() {
     (function() {
-      __out.push('<div ng-controller="Landing" id="landingpage">\n\t<section>\n\t  <header>\n\t  \t<h1 class="left">Raspr</h1>\n\t  \t<img src="');
+      __out.push('<div ng-controller="Landing" id="landingpage">\n\t<section>\n\t  <header>\n\t  \t<h1 class="left">Rasp</h1>\n\t  \t<img src="');
     
       __out.push(__sanitize(DepMan.image("logo")));
     
@@ -21008,7 +21374,7 @@ return window.JSONImport['ro-RO'] = module.exports = item;}, "data/stylesheets/f
   }
   (function() {
     (function() {
-      __out.push('<div class="container">\n\t<h1 ');
+      __out.push('<div class="container" id="register-form">\n\t<h1 ');
     
       __out.push(__sanitize(_T("Register")));
     
@@ -21028,7 +21394,7 @@ return window.JSONImport['ro-RO'] = module.exports = item;}, "data/stylesheets/f
     
       __out.push(__sanitize(_T("Submit")));
     
-      __out.push('></button>\n\t</div>\n</div>');
+      __out.push(' id="submit-button"></button>\n\t</div>\n</div>');
     
     }).call(this);
     
@@ -24711,6 +25077,3401 @@ window.AppInfo = {
   },
   "main": "./lib/script.js"
 }
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Raspr Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
+;window.AppInfo = {
+  "name": "raspr",
+  "displayname": "Rasp Store",
+  "version": "0.1.0",
+  "author": {
+    "name": "Sabin Marcu",
+    "email": "sabinmarcu@gmail.com"
+  },
+  "dependencies": {
+    "coffee-script": "*",
+    "cliparser": "*",
+    "express": "*",
+    "less": "*",
+    "stylus": "*",
+    "nib": "*",
+    "isf": "*",
+    "codo": "*",
+    "stitchw": "*",
+    "pc2cs": "*",
+    "eco": "~1.1.0-rc-3",
+    "mime": "~1.2.9",
+    "LiveScript": "~1.1.1",
+    "js-yaml": "~2.1.0",
+    "grunt-contrib-watch": "~0.4.4",
+    "grunt": "~0.4.1",
+    "grunt-devtools": "0.1.0-7"
+  },
+  "scripts": {
+    "create-dir-structure": "mkdir lib src spec bin",
+    "compile": "node node_modules/.bin/coffee -c -o lib src",
+    "run-tests": "node node_modules/.bin/jasmine-node --coffee --noColor spec",
+    "test": "npm run-script compile && npm run-script run-tests"
+  },
+  "main": "./lib/script.js"
+}
 ;// Writing Copyright Information to HTML
 var done = false;
 
@@ -24730,7 +28491,7 @@ Other than that, feel free to enjoy the application!
 @Application Name : Raspr Store
 @Author           : Sabin Marcu <sabinmarcu@gmail.com>
 @Version          : 0.1.0
-@Date Compiled    : Sat Aug 24 2013 23:27:22 GMT+0300 (EEST)
+@Date Compiled    : Sun Aug 25 2013 16:43:23 GMT+0300 (EEST)
 **/
 
 !function(module){!function(){var CHARS="0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".split("");Math.uuid=function(len,radix){var chars=CHARS,uuid=[],i;radix=radix||chars.length;if(len){for(i=0;i<len;i++)uuid[i]=chars[0|Math.random()*radix]}else{var r;uuid[8]=uuid[13]=uuid[18]=uuid[23]="-";uuid[14]="4";for(i=0;i<36;i++){if(!uuid[i]){r=0|Math.random()*16;uuid[i]=chars[i==19?r&3|8:r]}}}return uuid.join("")};Math.uuidFast=function(){var chars=CHARS,uuid=new Array(36),rnd=0,r;for(var i=0;i<36;i++){if(i==8||i==13||i==18||i==23){uuid[i]="-"}else if(i==14){uuid[i]="4"}else{if(rnd<=2)rnd=33554432+Math.random()*16777216|0;r=rnd&15;rnd=rnd>>4;uuid[i]=chars[i==19?r&3|8:r]}}return uuid.join("")};Math.uuidCompact=function(){return"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,function(c){var r=Math.random()*16|0,v=c=="x"?r:r&3|8;return v.toString(16)})}}();!function(){if(!this.require){var modules={},cache={},require=function(name,root){var path=expand(root,name),module=cache[path],fn;if(module){return module.exports}else if(fn=modules[path]||modules[path=expand(path,"./index")]){module={id:path,exports:{}};try{cache[path]=module;fn(module.exports,function(name){return require(name,dirname(path))},module);return module.exports}catch(err){delete cache[path];throw err}}else{throw"module '"+name+"' not found"}},expand=function(root,name){var results=[],parts,part;if(/^\.\.?(\/|$)/.test(name)){parts=[root,name].join("/").split("/")}else{parts=name.split("/")}for(var i=0,length=parts.length;i<length;i++){part=parts[i];if(part==".."){results.pop()}else if(part!="."&&part!=""){results.push(part)}}return results.join("/")},dirname=function(path){return path.split("/").slice(0,-1).join("/")};this.require=function(name){return require(name,"")};this.require.define=function(bundle){for(var key in bundle)modules[key]=bundle[key]}}return this.require.define}.call(this)({Enum:function(exports,require,module){!function(){var Enum;Enum=function(){function Enum(items,offset){var item,key,_i,_len;if(offset==null){offset=0}for(key=_i=0,_len=items.length;_i<_len;key=++_i){item=items[key];this[item]=key+offset}}return Enum}();module.exports=Enum}.call(this)},ErrorReporter:function(exports,require,module){!function(){var ErrorReporter,__bind=function(fn,me){return function(){return fn.apply(me,arguments)}},__indexOf=[].indexOf||function(item){for(var i=0,l=this.length;i<l;i++){if(i in this&&this[i]===item)return i}return-1};ErrorReporter=function(){function ErrorReporter(){this.toString=__bind(this.toString,this)}ErrorReporter._errors={"Unknown Error":["An unknown error has occurred"]};ErrorReporter._indices=[ErrorReporter._errors["Unknown Error"][0]];ErrorReporter._groups=["Unknown Error"];ErrorReporter.wrapCustomError=function(error){return"["+error.name+"] "+error.message};ErrorReporter.generate=function(errorCode,extra){if(extra==null){extra=null}return(new this).generate(errorCode,extra)};ErrorReporter.extended=function(){var error,errors,group,key,_i,_len,_ref;_ref=this.errors;for(group in _ref){errors=_ref[group];this._errors[group]=errors;this._groups.push(group);for(key=_i=0,_len=errors.length;_i<_len;key=++_i){error=errors[key];this._indices.push(this._errors[group][key])}}this.prototype._=this;delete this.errors;return this.include(ErrorReporter.prototype)};ErrorReporter.prototype.generate=function(errCode,extra){var errors,group,_ref,_ref1;this.errCode=errCode;if(extra==null){extra=null}if(!this._._indices[this.errCode]){this.name=this._._groups[0];this.message=this._._errors[this._._groups[0]][0]}else{this.message=this._._indices[this.errCode];if(extra){this.message+=" - Extra Data : "+extra}_ref=this._._errors;for(group in _ref){errors=_ref[group];if(!(_ref1=this.message,__indexOf.call(errors,_ref1)>=0)){continue}this.name=group;break}}return this};ErrorReporter.prototype.toString=function(){return"["+this.name+"] "+this.message+" |"+this.errCode+"|"};return ErrorReporter}();module.exports=ErrorReporter}.call(this)},"Modules/Mediator":function(exports,require,module){!function(){var Modules;Modules={Observer:require("Modules/Observer")};Modules.Mediator=function(){var extended,included,installTo,key,value,_ref;function Mediator(){}_ref=Modules.Observer;for(key in _ref){value=_ref[key];Mediator.prototype[key]=value}installTo=function(object){this.delegate("publish",object);return this.delegate("subscribe",object)};included=function(){this.prototype.queue={};return this.prototype._delegates={publish:true,subscribe:true}};extended=function(){this.queue={};return this._delegates={publish:true,subscribe:true}};return Mediator}();module.exports=Modules.Mediator.prototype}.call(this)},"Modules/ORM":function(exports,require,module){!function(){var Modules,V,__indexOf=[].indexOf||function(item){for(var i=0,l=this.length;i<l;i++){if(i in this&&this[i]===item)return i}return-1};Modules={};V=require("Variable");Modules.ORM=function(){function ORM(){}ORM.prototype._identifier="BasicORM";ORM.prototype._reccords={};ORM.prototype._symlinks={};ORM.prototype._head=0;ORM.prototype._props=[];ORM.prototype.get=function(which){if(typeof which==="object"){return this.getAdv(which)}return this._symlinks[which]||this._reccords[which]||null};ORM.prototype.getAdv=function(what){var check,key,rec,results,_ref,_ref1;results=[];check=function(rec){var final,k,mod,modfinal,recs,v,val,value,_i,_len;for(k in what){v=what[k];final=false;if(rec[k]==null){break}if(typeof v==="object"){for(mod in v){val=v[mod];modfinal=true;switch(mod){case"$gt":if(rec[k].get()<=val){modfinal=false;break}break;case"$gte":if(rec[k].get()<val){modfinal=false;break}break;case"$lt":if(rec[k].get()>=val){modfinal=false;break}break;case"$lte":if(rec[k].get()>val){modfinal=false;break}break;case"$contains":recs=rec[k].get();if(recs.constructor!==Array){modfinal=false;break}modfinal=false;for(_i=0,_len=recs.length;_i<_len;_i++){value=recs[_i];if(value===val){modfinal=true;break}}}if(modfinal===false){break}}if(modfinal===true){final=true}}else if(rec[k].get()===v){final=true}else{break}}if(final){return results.push(rec)}};_ref=this._reccords;for(key in _ref){rec=_ref[key];check(rec)}_ref1=this._symlinks;for(key in _ref1){rec=_ref1[key];check(rec)}if(results.length===0){return null}if(results.length===1){return results[0]}return results};ORM.prototype["delete"]=function(which){var _base,_base1;if((_base=this._reccords)[which]==null){_base[which]=null}return(_base1=this._symlinks)[which]!=null?(_base1=this._symlinks)[which]:_base1[which]=null};ORM.prototype.create=function(id,args){var prop,uuid,_i,_len,_ref;if(this._reccords==null){this._reccords={}}if(args==null){args={}}uuid=id||args._id||this._head;if(args._id==null){args._id=uuid}uuid=Math.uuidFast(uuid);args._uuid=uuid;args._fn=this;if(typeof this.preCreate==="function"){this.preCreate(args)}this._reccords[uuid]=new this(args);this._reccords[uuid]._constructor(args);if(typeof this.postCreate==="function"){this.postCreate(this._reccords[uuid],args)}if(id!=null&&id!==this._head){this._symlinks[id]=this._reccords[uuid]}if(uuid===this._head){this._head++}_ref=this._props;for(_i=0,_len=_ref.length;_i<_len;_i++){prop=_ref[_i];this._reccords[uuid][prop]=V.spawn()}return this._reccords[uuid]};ORM.prototype.reuse=function(which,args){var rez;if(args==null){args={}}rez=this.get(which);if(rez!=null){return rez}return this.create(which,args)};ORM.prototype.addProp=function(prop){var key,rec,_ref,_results;this._props.push(prop);_ref=this._reccords;_results=[];for(key in _ref){rec=_ref[key];_results.push(rec[prop]!=null?rec[prop]:rec[prop]=V.spawn())}return _results};ORM.prototype.removeProp=function(prop){var k,key,p,rec,_i,_len,_ref,_ref1;_ref=this._reccords;for(key in _ref){rec=_ref[key];if(rec[prop]==null){rec[prop]=null}}_ref1=this._props;for(k=_i=0,_len=_ref1.length;_i<_len;k=++_i){p=_ref1[k];if(p===prop){return this._props.splice(k,1)}}};ORM.prototype.extended=function(){this._excludes=["_fn","_uuid","_id"];return this.include({_constructor:function(args){var k,key,v,value,valueSet,_results;valueSet={};this._uuid=args._uuid||null;this._id=args._id||null;this.fn=args._fn;for(key in args){value=args[key];if(__indexOf.call(this.fn._excludes,key)<0&&this.constructFilter(key,value)!==false){valueSet[key]=value}}if(this.init!=null){return this.init.call(this,valueSet)}_results=[];for(k in valueSet){v=valueSet[k];_results.push(this[k]=v)}return _results},constructFilter:function(key,value){return true},remove:function(){return this.parent.remove(this.id)}})};return ORM}();module.exports=Modules.ORM.prototype}.call(this)},"Modules/Observer":function(exports,require,module){!function(){var Modules,__slice=[].slice;Modules={};Modules.Observer=function(){function Observer(){}Observer.prototype.delegateEvent=function(event,handler,object){var c,_base;if(object==null){object=window}if(event.substr(0,2)==="on"){event=event.substr(2)}if((_base=this.queue)[event]==null){_base[event]=[]}c=this.queue[event].length;this.queue[event].unshift(function(){return handler.apply(object,arguments)});return c};Observer.prototype.subscribe=function(event,handler){return this.delegateEvent(event,handler,this)};Observer.prototype.publish=function(){var args,event,handler,key,_ref;args=1<=arguments.length?__slice.call(arguments,0):[];event=args[0];args=args.splice(1);if(!event||this.queue[event]==null){return this}_ref=this.queue[event];for(key in _ref){handler=_ref[key];if(key!=="__head"){handler.apply(this,args)}}return this};Observer.prototype.unsubscribe=function(event,id){if(!this.queue[event]){return null}if(!this.queue[event][id]){return null}return this.queue[event].splice(id,1)};Observer.prototype.included=function(){return this.prototype.queue={}};Observer.prototype.extended=function(){return this.queue={}};return Observer}();module.exports=Modules.Observer.prototype}.call(this)},"Modules/Overload":function(exports,require,module){!function(){var CRITERIA,Include,Modules,_count,__slice=[].slice,__bind=function(fn,me){return function(){return fn.apply(me,arguments)}};Modules={};_count=function(object){var key,nr,value;nr=0;for(key in object){value=object[key];nr++}return nr};CRITERIA={args:function(crit,args){return args.length===crit}};Include=function(){function Include(){}Include.prototype.overload=function(sets){var helper;helper=new Modules.Overload(sets,this);return function(){var args;args=1<=arguments.length?__slice.call(arguments,0):[];helper.parent=this;return helper.verifyAll.apply(helper,args)}};return Include}();Modules.Overload=function(){function Overload(sets,parent){var aux,i,j,name,set,_i,_j,_ref,_ref1,_ref2;this.parent=parent;this.verify=__bind(this.verify,this);this.verifyAll=__bind(this.verifyAll,this);this.names=[];this.verifies=[];this.handles=[];for(name in sets){set=sets[name];this.names.push(name);this.verifies.push(set["if"]||null);this.handles.push(set.then||null)}for(i=_i=0,_ref=this.verifies.length-1;0<=_ref?_i<=_ref:_i>=_ref;i=0<=_ref?++_i:--_i){for(j=_j=_ref1=i+1,_ref2=this.verifies.length;_ref1<=_ref2?_j<=_ref2:_j>=_ref2;j=_ref1<=_ref2?++_j:--_j){if(_count(this.verifies[i])<_count(this.verifies[j])){aux=this.verifies[i];this.verifies[i]=this.verifies[j];this.verifies[j]=aux;aux=this.names[i];this.names[i]=this.names[j];this.names[j]=aux;aux=this.handles[i];this.handles[i]=this.handles[j];this.handles[j]=aux}}}}Overload.prototype.verifyAll=function(){var args,how,key,set,what,_i,_len,_ref;args=1<=arguments.length?__slice.call(arguments,0):[];this.args=args;_ref=this.verifies;for(key=_i=0,_len=_ref.length;_i<_len;key=++_i){set=_ref[key];if(set!=null){for(what in set){how=set[what];if(!this.verify(what,how)){break}return this.handles[key].apply(this.parent,this.args)}}}return(this.handles["default"]||this.handles[key-1]).apply(this.parent,this.args)};Overload.prototype.verify=function(what,how){if(CRITERIA[what]){return CRITERIA[what](how,this.args)}else{what=parseInt(what.replace("arg",""))-1;if(this.args[what]!=null){return how.apply(this.parent,this.args)}return false}};return Overload}();module.exports=Include.prototype}.call(this)},"Modules/Pythonize":function(exports,require,module){!function(){var CRITERIA,Include,Modules,_count,__slice=[].slice,__bind=function(fn,me){return function(){return fn.apply(me,arguments)}},__indexOf=[].indexOf||function(item){for(var i=0,l=this.length;i<l;i++){if(i in this&&this[i]===item)return i}return-1};Modules={};_count=function(object){var key,nr,value;nr=0;for(key in object){value=object[key];nr++}return nr};CRITERIA={args:function(crit,args){return args.length===crit}};Include=function(){function Include(){}Include.prototype.parameterize=function(sets,callback){var helper;helper=new Modules.Pythonize(sets,callback);return function(){var args;args=1<=arguments.length?__slice.call(arguments,0):[];helper.parent=this;return helper.verifyAll.apply(helper,args)}};return Include}();Modules.Pythonize=function(){function Pythonize(sets,callback){var item,newItem,_i,_len;this.callback=callback;this.verifyAll=__bind(this.verifyAll,this);this.parent=null;this._options=[];for(_i=0,_len=sets.length;_i<_len;_i++){item=sets[_i];newItem={name:item.name||item.toString(),"default":item["default"]||null};this._options.push(newItem)}}Pythonize.prototype.verifyAll=function(){var arg,args,curArg,i,items,lastarg,len,_i,_ref,_ref1,_ref2;args=1<=arguments.length?__slice.call(arguments,0):[];this.args=args;this.options={};len=this.args.length-1;i=0;while(this.args.length>1){curArg=this._options[i];arg=this.args.shift();this.options[curArg.name]=arg||curArg["default"];i++}lastarg=this.args.pop();items=this.verifyObject(lastarg,len);if(len<this._options.length-1){for(i=_i=_ref=len+(items.length===0),_ref1=this._options.length-1;_ref<=_ref1?_i<=_ref1:_i>=_ref1;i=_ref<=_ref1?++_i:--_i){if(!(_ref2=this._options[i].name,__indexOf.call(items,_ref2)>=0)){this.options[this._options[i].name]=this._options[i]["default"]}}}return this.callback.apply(this.parent,[this.options])};Pythonize.prototype.verifyObject=function(obj,id){var name,omits,option,valid,value,_i,_len,_ref;omits=[];if(typeof obj==="object"){for(name in obj){value=obj[name];valid=false;_ref=this._options;for(_i=0,_len=_ref.length;_i<_len;_i++){option=_ref[_i];if(option.name===name){valid=true;break}}if(!valid){this.options[this._options[id].name]=obj;return[]}else{omits.push(name);this.options[name]=value}}}else{this.options[this._options[id].name]=obj}return omits};return Pythonize}();module.exports=Include.prototype}.call(this)},"Modules/StateMachine":function(exports,require,module){!function(){var Modules,__bind=function(fn,me){return function(){return fn.apply(me,arguments)}};Modules={};Modules.StateMachine=function(){function StateMachine(){this.delegateContext=__bind(this.delegateContext,this)}StateMachine.prototype.extended=function(){this._contexts=[];return this._activeContext=null};StateMachine.prototype.included=function(){this.prototype._contexts=[];return this.prototype._activeContext=null};StateMachine.prototype.delegateContext=function(context){var l;if(this._find(context)){return null}l=this._contexts.length;this._contexts[l]=context;if(context.activate==null){context.activate=function(){}}if(context.deactivate==null){context.deactivate=function(){}}return this};StateMachine.prototype.getActiveContextID=function(){return this._activeContext};StateMachine.prototype.getActiveContext=function(){return this._activeContext};StateMachine.prototype.getContext=function(context){return this._contexts[context]||null};StateMachine.prototype._find=function(con){var key,value,_i,_len,_ref;_ref=this._contexts;for(value=_i=0,_len=_ref.length;_i<_len;value=++_i){key=_ref[value];if(con===key){return value}}return null};StateMachine.prototype.activateContext=function(context){var con;con=this._find(context);if(con==null){return null}if(this._activeContext===con){return true}this._activeContext=con;return context.activate()};StateMachine.prototype.deactivateContext=function(context){if(this._find(context)==null){return null}this._activeContext=null;return context.deactivate()};StateMachine.prototype.switchContext=function(context){var con;if(context==null){con=this._activeContext+1;if(con===this._contexts.length){con=0}}else{con=this._find(context);if(con==null){return null}}this.deactivateContext(this._contexts[this._activeContext]);this.activateContext(this._contexts[con]);return this._contexts[con]};return StateMachine}();module.exports=Modules.StateMachine.prototype}.call(this)},Object:function(exports,require,module){!function(){var $,Obiect,clone,_excludes,__indexOf=[].indexOf||function(item){for(var i=0,l=this.length;i<l;i++){if(i in this&&this[i]===item)return i}return-1},__slice=[].slice;_excludes=["included","extended"];clone=function(obj){var k,o,v;o=obj instanceof Array?[]:{};for(k in obj){v=obj[k];if(v!=null&&typeof v==="object"){o[k]=clone(v)}else{o[k]=v}}return o};$=function(what){return $[what]||null};Obiect=function(){var extended,included;function Obiect(){}Obiect.clone=function(obj){if(obj==null){obj=this}debugger;return Obiect.proxy(Obiect.include,Obiect.proxy(Obiect.extend,function(){})(obj))(obj.prototype)};Obiect.extend=function(obj,into){var k,value,_ref;if(into==null){into=this}obj=clone(obj);for(k in obj){value=obj[k];if(!(__indexOf.call(_excludes,k)>=0||obj._excludes!=null&&__indexOf.call(obj._excludes,k)>=0)){if(into[k]!=null){if(into["super"]==null){into["super"]={}}into["super"][k]=into[k]}into[k]=value}}if((_ref=obj.extended)!=null){_ref.call(into)}return this};Obiect.include=function(obj,into){var key,value,_ref;if(into==null){into=this}obj=clone(obj);for(key in obj){value=obj[key];into.prototype[key]=value}if((_ref=obj.included)!=null){_ref.call(into)}return this};Obiect.proxy=function(){var to,what,_this=this;what=arguments[0];to=arguments[1];if(typeof what==="function"){return function(){var args;args=1<=arguments.length?__slice.call(arguments,0):[];return what.apply(to,args)}}else{return this[what]}};Obiect.delegate=function(property,context){var _ref;if(((_ref=this._delegates)!=null?_ref[property]:void 0)!=null===false&&this._deleagates[property]!==false){trigger("Cannot delegate member "+property+" to "+context)}return context[property]=this.proxy(function(){return this[property](arguments)},this)};Obiect.echo=function(){var args,owner,prefix,_d;args=1<=arguments.length?__slice.call(arguments,0):[];_d=new Date;owner="<not supported>";if(this.__proto__!=null){owner=this.__proto__.constructor.name}prefix="["+_d.getHours()+":"+_d.getMinutes()+":"+_d.getSeconds()+"]["+(this.name||owner)+"]";if(args[0]===""){args[0]=prefix}else{args[0]=""+prefix+" "+args[0]}console.log(args);return this};Obiect.log=function(){var args;args=1<=arguments.length?__slice.call(arguments,0):[];if((typeof IS!=="undefined"&&IS!==null?IS.isDev:void 0)||window.isDev||(typeof root!=="undefined"&&root!==null?root.isDev:void 0)||isDev){args.unshift("");this.echo.apply(this,args)}return this};extended=function(){};included=function(){};Obiect.include({proxy:Obiect.proxy,log:Obiect.log,echo:Obiect.echo});return Obiect}();module.exports=Obiect}.call(this)},Promise:function(exports,require,module){!function(){var Promise,__slice=[].slice;Promise=function(){function Promise(promise){if(promise instanceof Promise){return promise}this.callbacks=[]}Promise.prototype.then=function(ok,err,progr){this.callbacks.push({ok:ok,error:err,progress:progr});return this};Promise.prototype.resolve=function(){var args,callback,time,_this=this;args=1<=arguments.length?__slice.call(arguments,0):[];callback=this.callbacks.shift();if(callback&&callback.ok){callback.ok.apply(this,args)}else{time=setTimeout(function(){clearTimeout(time);return _this.resolve.apply(_this,args)},50)}return this};Promise.prototype.reject=function(){var args,callback,time,_this=this;args=1<=arguments.length?__slice.call(arguments,0):[];callback=this.callbacks.shift();if(callback&&callback.error){callback.error.apply(this,args)}else{time=setTimeout(function(){clearTimeout(time);return _this.reject.apply(_this,args)},50)}return this};Promise.prototype.progress=function(){var args,callback;args=1<=arguments.length?__slice.call(arguments,0):[];callback=this.callbacks[0];if(callback&&callback.progress){callback.progress.apply(this,args)}return this};return Promise}();module.exports=Promise}.call(this)},Variable:function(exports,require,module){!function(){var Variable,_ref,__hasProp={}.hasOwnProperty,__extends=function(child,parent){for(var key in parent){if(__hasProp.call(parent,key))child[key]=parent[key]}function ctor(){this.constructor=child}ctor.prototype=parent.prototype;child.prototype=new ctor;child.__super__=parent.prototype;return child};Variable=function(_super){__extends(Variable,_super);function Variable(){_ref=Variable.__super__.constructor.apply(this,arguments);return _ref}Variable.spawn=function(){var x;x=new this;x._value=null;return x};Variable.prototype.get=function(){return this._value};Variable.prototype.set=function(value){return this._value=value};Variable.prototype.add=function(reccord){if(this._value==null||this._value.constructor!==Array){this._value=[]}return this._value.push(reccord)};return Variable}(require("Object"));if(typeof module!=="undefined"&&module!==null){module.exports=Variable}}.call(this)},async:function(exports,require,module){!function(){var async={};var root,previous_async;root=this;if(root!=null){previous_async=root.async}async.noConflict=function(){root.async=previous_async;return async};function only_once(fn){var called=false;return function(){if(called)throw new Error("Callback was already called.");called=true;fn.apply(root,arguments)}}var _each=function(arr,iterator){if(arr.forEach){return arr.forEach(iterator)}for(var i=0;i<arr.length;i+=1){iterator(arr[i],i,arr)}};var _map=function(arr,iterator){if(arr.map){return arr.map(iterator)}var results=[];_each(arr,function(x,i,a){results.push(iterator(x,i,a))});return results};var _reduce=function(arr,iterator,memo){if(arr.reduce){return arr.reduce(iterator,memo)}_each(arr,function(x,i,a){memo=iterator(memo,x,i,a)});return memo};var _keys=function(obj){if(Object.keys){return Object.keys(obj)}var keys=[];for(var k in obj){if(obj.hasOwnProperty(k)){keys.push(k)}}return keys};if(typeof process==="undefined"||!process.nextTick){if(typeof setImmediate==="function"){async.nextTick=function(fn){setImmediate(fn)};async.setImmediate=async.nextTick}else{async.nextTick=function(fn){setTimeout(fn,0)};async.setImmediate=async.nextTick}}else{async.nextTick=process.nextTick;if(typeof setImmediate!=="undefined"){async.setImmediate=setImmediate}else{async.setImmediate=async.nextTick}}async.each=function(arr,iterator,callback){callback=callback||function(){};if(!arr.length){return callback()}var completed=0;_each(arr,function(x){iterator(x,only_once(function(err){if(err){callback(err);callback=function(){}}else{completed+=1;if(completed>=arr.length){callback(null)}}}))})};async.forEach=async.each;async.eachSeries=function(arr,iterator,callback){callback=callback||function(){};if(!arr.length){return callback()}var completed=0;var iterate=function(){iterator(arr[completed],function(err){if(err){callback(err);callback=function(){}}else{completed+=1;if(completed>=arr.length){callback(null)}else{iterate()}}})};iterate()};async.forEachSeries=async.eachSeries;async.eachLimit=function(arr,limit,iterator,callback){var fn=_eachLimit(limit);fn.apply(null,[arr,iterator,callback])};async.forEachLimit=async.eachLimit;var _eachLimit=function(limit){return function(arr,iterator,callback){callback=callback||function(){};if(!arr.length||limit<=0){return callback()}var completed=0;var started=0;var running=0;!function replenish(){if(completed>=arr.length){return callback()}while(running<limit&&started<arr.length){started+=1;running+=1;iterator(arr[started-1],function(err){if(err){callback(err);callback=function(){}}else{completed+=1;running-=1;if(completed>=arr.length){callback()}else{replenish()}}})}}()}};var doParallel=function(fn){return function(){var args=Array.prototype.slice.call(arguments);return fn.apply(null,[async.each].concat(args))}};var doParallelLimit=function(limit,fn){return function(){var args=Array.prototype.slice.call(arguments);return fn.apply(null,[_eachLimit(limit)].concat(args))}};var doSeries=function(fn){return function(){var args=Array.prototype.slice.call(arguments);return fn.apply(null,[async.eachSeries].concat(args))}};var _asyncMap=function(eachfn,arr,iterator,callback){var results=[];arr=_map(arr,function(x,i){return{index:i,value:x}});eachfn(arr,function(x,callback){iterator(x.value,function(err,v){results[x.index]=v;callback(err)})},function(err){callback(err,results)})};async.map=doParallel(_asyncMap);async.mapSeries=doSeries(_asyncMap);async.mapLimit=function(arr,limit,iterator,callback){return _mapLimit(limit)(arr,iterator,callback)};var _mapLimit=function(limit){return doParallelLimit(limit,_asyncMap)};async.reduce=function(arr,memo,iterator,callback){async.eachSeries(arr,function(x,callback){iterator(memo,x,function(err,v){memo=v;callback(err)})},function(err){callback(err,memo)})};async.inject=async.reduce;async.foldl=async.reduce;async.reduceRight=function(arr,memo,iterator,callback){var reversed=_map(arr,function(x){return x}).reverse();async.reduce(reversed,memo,iterator,callback)};async.foldr=async.reduceRight;var _filter=function(eachfn,arr,iterator,callback){var results=[];arr=_map(arr,function(x,i){return{index:i,value:x}});eachfn(arr,function(x,callback){iterator(x.value,function(v){if(v){results.push(x)}callback()})},function(err){callback(_map(results.sort(function(a,b){return a.index-b.index}),function(x){return x.value}))})};async.filter=doParallel(_filter);async.filterSeries=doSeries(_filter);async.select=async.filter;async.selectSeries=async.filterSeries;var _reject=function(eachfn,arr,iterator,callback){var results=[];arr=_map(arr,function(x,i){return{index:i,value:x}});eachfn(arr,function(x,callback){iterator(x.value,function(v){if(!v){results.push(x)}callback()})},function(err){callback(_map(results.sort(function(a,b){return a.index-b.index}),function(x){return x.value}))})};async.reject=doParallel(_reject);async.rejectSeries=doSeries(_reject);var _detect=function(eachfn,arr,iterator,main_callback){eachfn(arr,function(x,callback){iterator(x,function(result){if(result){main_callback(x);main_callback=function(){}}else{callback()}})},function(err){main_callback()})};async.detect=doParallel(_detect);async.detectSeries=doSeries(_detect);async.some=function(arr,iterator,main_callback){async.each(arr,function(x,callback){iterator(x,function(v){if(v){main_callback(true);main_callback=function(){}}callback()})},function(err){main_callback(false)})};async.any=async.some;async.every=function(arr,iterator,main_callback){async.each(arr,function(x,callback){iterator(x,function(v){if(!v){main_callback(false);main_callback=function(){}}callback()})},function(err){main_callback(true)})};async.all=async.every;async.sortBy=function(arr,iterator,callback){async.map(arr,function(x,callback){iterator(x,function(err,criteria){if(err){callback(err)}else{callback(null,{value:x,criteria:criteria})}})},function(err,results){if(err){return callback(err)}else{var fn=function(left,right){var a=left.criteria,b=right.criteria;return a<b?-1:a>b?1:0};callback(null,_map(results.sort(fn),function(x){return x.value}))}})};async.auto=function(tasks,callback){callback=callback||function(){};var keys=_keys(tasks);if(!keys.length){return callback(null)}var results={};var listeners=[];var addListener=function(fn){listeners.unshift(fn)};var removeListener=function(fn){for(var i=0;i<listeners.length;i+=1){if(listeners[i]===fn){listeners.splice(i,1);return}}};var taskComplete=function(){_each(listeners.slice(0),function(fn){fn()})};addListener(function(){if(_keys(results).length===keys.length){callback(null,results);callback=function(){}}});_each(keys,function(k){var task=tasks[k]instanceof Function?[tasks[k]]:tasks[k];var taskCallback=function(err){var args=Array.prototype.slice.call(arguments,1);if(args.length<=1){args=args[0]}if(err){var safeResults={};_each(_keys(results),function(rkey){safeResults[rkey]=results[rkey]});safeResults[k]=args;callback(err,safeResults);callback=function(){}}else{results[k]=args;async.setImmediate(taskComplete)}};var requires=task.slice(0,Math.abs(task.length-1))||[];var ready=function(){return _reduce(requires,function(a,x){return a&&results.hasOwnProperty(x)},true)&&!results.hasOwnProperty(k)};if(ready()){task[task.length-1](taskCallback,results)}else{var listener=function(){if(ready()){removeListener(listener);task[task.length-1](taskCallback,results)}};addListener(listener)}})};async.waterfall=function(tasks,callback){callback=callback||function(){};if(tasks.constructor!==Array){var err=new Error("First argument to waterfall must be an array of functions");return callback(err)}if(!tasks.length){return callback()}var wrapIterator=function(iterator){return function(err){if(err){callback.apply(null,arguments);callback=function(){}}else{var args=Array.prototype.slice.call(arguments,1);var next=iterator.next();if(next){args.push(wrapIterator(next))}else{args.push(callback)}async.setImmediate(function(){iterator.apply(null,args)})}}};wrapIterator(async.iterator(tasks))()};var _parallel=function(eachfn,tasks,callback){callback=callback||function(){};if(tasks.constructor===Array){eachfn.map(tasks,function(fn,callback){if(fn){fn(function(err){var args=Array.prototype.slice.call(arguments,1);if(args.length<=1){args=args[0]}callback.call(null,err,args)})}},callback)}else{var results={};eachfn.each(_keys(tasks),function(k,callback){tasks[k](function(err){var args=Array.prototype.slice.call(arguments,1);if(args.length<=1){args=args[0]}results[k]=args;callback(err)})},function(err){callback(err,results)})}};async.parallel=function(tasks,callback){_parallel({map:async.map,each:async.each},tasks,callback)};async.parallelLimit=function(tasks,limit,callback){_parallel({map:_mapLimit(limit),each:_eachLimit(limit)},tasks,callback)};async.series=function(tasks,callback){callback=callback||function(){};if(tasks.constructor===Array){async.mapSeries(tasks,function(fn,callback){if(fn){fn(function(err){var args=Array.prototype.slice.call(arguments,1);if(args.length<=1){args=args[0]}callback.call(null,err,args)})}},callback)}else{var results={};async.eachSeries(_keys(tasks),function(k,callback){tasks[k](function(err){var args=Array.prototype.slice.call(arguments,1);if(args.length<=1){args=args[0]}results[k]=args;callback(err)})},function(err){callback(err,results)})}};async.iterator=function(tasks){var makeCallback=function(index){var fn=function(){if(tasks.length){tasks[index].apply(null,arguments)}return fn.next()};fn.next=function(){return index<tasks.length-1?makeCallback(index+1):null};return fn};return makeCallback(0)};async.apply=function(fn){var args=Array.prototype.slice.call(arguments,1);return function(){return fn.apply(null,args.concat(Array.prototype.slice.call(arguments)))}};var _concat=function(eachfn,arr,fn,callback){var r=[];eachfn(arr,function(x,cb){fn(x,function(err,y){r=r.concat(y||[]);cb(err)})},function(err){callback(err,r)})};async.concat=doParallel(_concat);async.concatSeries=doSeries(_concat);async.whilst=function(test,iterator,callback){if(test()){iterator(function(err){if(err){return callback(err)}async.whilst(test,iterator,callback)})}else{callback()}};async.doWhilst=function(iterator,test,callback){iterator(function(err){if(err){return callback(err)}if(test()){async.doWhilst(iterator,test,callback)}else{callback()}})};async.until=function(test,iterator,callback){if(!test()){iterator(function(err){if(err){return callback(err)}async.until(test,iterator,callback)})}else{callback()}};async.doUntil=function(iterator,test,callback){iterator(function(err){if(err){return callback(err)}if(!test()){async.doUntil(iterator,test,callback)}else{callback()}})};async.queue=function(worker,concurrency){if(concurrency===undefined){concurrency=1}function _insert(q,data,pos,callback){if(data.constructor!==Array){data=[data]
@@ -25014,6 +28775,8 @@ Other than that, feel free to enjoy the application!
       DepMan.controller("AppRouter");
       DepMan.controller("AccountController");
       DepMan.controller("RecipeController");
+      DepMan.controller("ApplicationsController");
+      DepMan.controller("DevicesController");
       DepMan.model("UserModel");
       return angular.bootstrap(document.body, [AppInfo.displayname]);
     };
@@ -25085,11 +28848,11 @@ Other than that, feel free to enjoy the application!
   var AccountController;
   AccountController = (function(superclass){
     var prototype = extend$((import$(AccountController, superclass).displayName = 'AccountController', AccountController), superclass).prototype, constructor = AccountController;
-    function AccountController(scope, runtime, userModel){
+    function AccountController(scope, runtime, user){
       var this$ = this instanceof ctor$ ? this : new ctor$;
       this$.scope = scope;
       this$.runtime = runtime;
-      this$.userModel = userModel;
+      this$.user = user;
       this$.verifyNewPasswords = bind$(this$, 'verifyNewPasswords', prototype);
       this$.changePassword = bind$(this$, 'changePassword', prototype);
       this$.hookEvents = bind$(this$, 'hookEvents', prototype);
@@ -25115,7 +28878,6 @@ Other than that, feel free to enjoy the application!
       return this;
     };
     prototype.getModel = function(){
-      this.user = new this.userModel;
       return this;
     };
     prototype.hookEvents = function(){
@@ -25263,6 +29025,128 @@ Other than that, feel free to enjoy the application!
     return AppRouter;
   }(IS.Object));
   angular.module(AppInfo.displayname).controller("AppRouter", ["$scope", "Runtime", AppRouter]);
+  function bind$(obj, key, target){
+    return function(){ return (target || obj)[key].apply(obj, arguments) };
+  }
+  function extend$(sub, sup){
+    function fun(){} fun.prototype = (sub.superclass = sup).prototype;
+    (sub.prototype = new fun).constructor = sub;
+    if (typeof sup.extended == 'function') sup.extended(sub);
+    return sub;
+  }
+  function import$(obj, src){
+    var own = {}.hasOwnProperty;
+    for (var key in src) if (own.call(src, key)) obj[key] = src[key];
+    return obj;
+  }
+}).call(this);
+}, "classes/controllers/ApplicationsController": function(exports, require, module) {(function(){
+  var ApplicationsController;
+  ApplicationsController = (function(superclass){
+    var prototype = extend$((import$(ApplicationsController, superclass).displayName = 'ApplicationsController', ApplicationsController), superclass).prototype, constructor = ApplicationsController;
+    function ApplicationsController(scope, runtime, recipeModel, user){
+      var this$ = this instanceof ctor$ ? this : new ctor$;
+      this$.scope = scope;
+      this$.runtime = runtime;
+      this$.recipeModel = recipeModel;
+      this$.user = user;
+      this$.installApp = bind$(this$, 'installApp', prototype);
+      this$.getModel = bind$(this$, 'getModel', prototype);
+      this$.configScope = bind$(this$, 'configScope', prototype);
+      this$.getModel().configScope();
+      return this$;
+    } function ctor$(){} ctor$.prototype = prototype;
+    prototype.configScope = function(){
+      var this$ = this;
+      this.info = {
+        device: null
+      };
+      this.safeApply = function(fn){
+        var phase;
+        phase = this$.scope.$parent.$$phase;
+        if (phase === "$apply" || phase === "$digest") {
+          if (fn && typeof fn === 'function') {
+            return fn();
+          }
+        } else {
+          return this$.scope.$apply(fn);
+        }
+      };
+      import$(this.scope, this);
+      return this;
+    };
+    prototype.getModel = function(){
+      this.recipeModel.controller = this;
+      return this;
+    };
+    prototype.installApp = function(recipe){
+      Client.post("devices/stack_app", {
+        uuid: this.info.device.uuid,
+        app_id: UserModel.data.mail + "$" + recipe._id
+      }, function(){
+        return Toast("Success", "App queued to install on device");
+      }, function(){
+        return Toast("Error", "Failed to queue app for install");
+      });
+      return this.info.device = null;
+    };
+    return ApplicationsController;
+  }(IS.Object));
+  angular.module(AppInfo.displayname).controller("ApplicationsController", ["$scope", "Runtime", "Recipe", "User", ApplicationsController]);
+  function bind$(obj, key, target){
+    return function(){ return (target || obj)[key].apply(obj, arguments) };
+  }
+  function extend$(sub, sup){
+    function fun(){} fun.prototype = (sub.superclass = sup).prototype;
+    (sub.prototype = new fun).constructor = sub;
+    if (typeof sup.extended == 'function') sup.extended(sub);
+    return sub;
+  }
+  function import$(obj, src){
+    var own = {}.hasOwnProperty;
+    for (var key in src) if (own.call(src, key)) obj[key] = src[key];
+    return obj;
+  }
+}).call(this);
+}, "classes/controllers/DevicesController": function(exports, require, module) {(function(){
+  var DevicesController;
+  DevicesController = (function(superclass){
+    var prototype = extend$((import$(DevicesController, superclass).displayName = 'DevicesController', DevicesController), superclass).prototype, constructor = DevicesController;
+    function DevicesController(scope, runtime, recipeModel){
+      var this$ = this instanceof ctor$ ? this : new ctor$;
+      this$.scope = scope;
+      this$.runtime = runtime;
+      this$.recipeModel = recipeModel;
+      this$.hookEvents = bind$(this$, 'hookEvents', prototype);
+      this$.getModel = bind$(this$, 'getModel', prototype);
+      this$.configScope = bind$(this$, 'configScope', prototype);
+      this$.getModel().configScope().hookEvents();
+      return this$;
+    } function ctor$(){} ctor$.prototype = prototype;
+    prototype.configScope = function(){
+      var this$ = this;
+      this.safeApply = function(fn){
+        var phase;
+        phase = this$.scope.$parent.$$phase;
+        if (phase === "$apply" || phase === "$digest") {
+          if (fn && typeof fn === 'function') {
+            return fn();
+          }
+        } else {
+          return this$.scope.$apply(fn);
+        }
+      };
+      import$(this.scope, this);
+      return this;
+    };
+    prototype.getModel = function(){
+      this.recipeModel.controller = this;
+      return this;
+    };
+    prototype.hookEvents = function(){};
+    return DevicesController;
+  }(IS.Object));
+  angular.module(AppInfo.displayname).controller("DevicesController", ["$scope", "Runtime", "Recipe", DevicesController]);
   function bind$(obj, key, target){
     return function(){ return (target || obj)[key].apply(obj, arguments) };
   }
@@ -26424,30 +30308,12 @@ Other than that, feel free to enjoy the application!
       return import$(this.scope, this);
     };
     prototype.initRuntime = function(){
-      return this.runtime.init("app-state", 'number');
+      this.runtime.init("app-state", 'number');
+      return this.runtime.subscribe("prop-app-state-change", this.safeApply);
     };
     prototype.getStored = function(){
-      var this$ = this;
-      this.prevState = States['landing'];
-      DBStorage.get("app-state", function(state){
-        this$.prevState = parseInt(state) || States['landing'];
-        this$.runtime.set("app-state", this$.prevState);
-        return this$.safeApply();
-      });
-      return this.runtime.subscribe("prop-app-state-change", function(value){
-        switch (value) {
-        case States['landing']:
-          DBStorage.set("app-state", States['landing']);
-          this$.log("State changed, switching to landing next time!");
-          break;
-        default:
-          if (this$.prevState === States['landing']) {
-            DBStorage.set("app-state", States['application']);
-            this$.log("State changed, switching to app next time!");
-          }
-        }
-        return this$.prevState = value;
-      });
+      this.runtime.set("app-state", States.landing);
+      return this.safeApply();
     };
     prototype.getBodyState = function(){
       return STATES[this.runtime.get("app-state")];
@@ -26514,7 +30380,6 @@ Other than that, feel free to enjoy the application!
       return this;
     };
     prototype.getModel = function(){
-      this.recipes = this.recipeModel._reccords;
       this.recipeModel.controller = this;
       return this;
     };
@@ -26525,7 +30390,13 @@ Other than that, feel free to enjoy the application!
       return setTimeout(LanguageHelper._translateAll, 50);
     };
     prototype.remove = function(recipe){
-      this.log(this.recipes, recipe);
+      Client.post("apps/remove", {
+        id: UserModel.data.mail + "$" + recipe.data.name
+      }, function(){
+        return Toast("Success", "Removed Successfuly");
+      }, function(){
+        return Toast("Error", "Something went wrong");
+      });
       delete this.recipes[recipe._uuid];
       return this.safeApply();
     };
@@ -26533,7 +30404,8 @@ Other than that, feel free to enjoy the application!
       return this.recipeModel['new']();
     };
     prototype.addStub = function(to){
-      to.push({
+      to.stubs == null && (to.stubs = []);
+      to.stubs.push({
         url: "http://github.com/rasberries/",
         instructions: []
       });
@@ -27501,6 +31373,7 @@ Other than that, feel free to enjoy the application!
     var prototype = extend$((import$(Client, superclass).displayName = 'Client', Client), superclass).prototype, constructor = Client;
     function Client(){
       var this$ = this instanceof ctor$ ? this : new ctor$;
+      this$.register = bind$(this$, 'register', prototype);
       this$.login = bind$(this$, 'login', prototype);
       this$.post = bind$(this$, 'post', prototype);
       this$.request = bind$(this$, 'request', prototype);
@@ -27516,8 +31389,14 @@ Other than that, feel free to enjoy the application!
         error: errorcb
       });
     };
-    prototype.post = function(something, data, callback){
-      return $.post(something, data, callback);
+    prototype.post = function(something, data, successcb, errorcb){
+      return $.ajax({
+        type: "post",
+        url: this.config.rootUrl + "api/" + something,
+        data: data,
+        success: successcb,
+        error: errorcb
+      });
     };
     prototype.login = function(data, cb){
       var this$ = this;
@@ -27526,6 +31405,18 @@ Other than that, feel free to enjoy the application!
         return cb();
       }, function(){
         return Toast("Error", "The mail/pass combination was a total fuckup");
+      });
+    };
+    prototype.register = function(data, cb){
+      var this$ = this;
+      return this.post("users/register", {
+        mail: data.mail,
+        password: data.pass
+      }, function(){
+        Toast("Success", "It worked! New account has been created!");
+        return cb();
+      }, function(){
+        return Toast("Error", "The account could not be created");
       });
     };
     return Client;
@@ -43300,7 +47191,140 @@ QRBitBuffer.prototype = {
 
         this.length++;
     }
-};}, "classes/models/Document": function(exports, require, module) {(function(){
+};}, "classes/models/AppModel": function(exports, require, module) {(function(){
+  var __blankData__, RecipeModel;
+  __blankData__ = {
+    description: "something",
+    stubs: []
+  };
+  RecipeModel = (function(superclass){
+    var prototype = extend$((import$(RecipeModel, superclass).displayName = 'RecipeModel', RecipeModel), superclass).prototype, constructor = RecipeModel;
+    RecipeModel.extend(IS.Modules.ORM);
+    RecipeModel.init = function(runtime){
+      RecipeModel.runtime = runtime;
+      window.RecipeRepo = RecipeModel;
+      RecipeModel.runtime.subscribe("prop-active-tab-change", function(){
+        if (RecipeModel.runtime.props['active-tab'] === 3) {
+          return RecipeModel.refresh();
+        }
+      });
+      RecipeModel.runtime.subscribe("prop-app-state-change", function(){
+        if (RecipeModel.runtime.props['app-state'] === 1) {
+          return RecipeModel.refresh();
+        }
+      });
+      RecipeModel.refresh();
+      return RecipeModel;
+    };
+    RecipeModel.refresh = function(){
+      var onsuccess, onerror;
+      onsuccess = function(list){
+        var ref$, i$, len$, item;
+        RecipeModel.list = list;
+        RecipeModel.log(RecipeModel.list);
+        RecipeModel._reccords = {};
+        if ((ref$ = RecipeModel.controller) != null) {
+          ref$.recipes = RecipeModel._reccords;
+        }
+        for (i$ = 0, len$ = (ref$ = RecipeModel.list).length; i$ < len$; ++i$) {
+          item = ref$[i$];
+          (fn$.call(RecipeModel, item, item));
+        }
+        RecipeModel.log(RecipeModel.controller);
+        return (ref$ = RecipeModel.controller) != null ? ref$.safeApply() : void 8;
+        function fn$(i, item){
+          var x, ref$;
+          if (i._id) {
+            delete i._id;
+          }
+          x = this.create(i.name, item);
+          x._id = i.name;
+          (ref$ = x.data).stubs == null && (ref$.stubs = []);
+        }
+      };
+      onerror = function(){
+        return Toast("Error", "Could not get the list of stuff!");
+      };
+      if (!((typeof UserModel == 'undefined' || UserModel === null) || UserModel.data == null || UserModel.data.mail == null)) {
+        return Client.request("users/" + UserModel.data.mail + "/apps", onsuccess, onerror);
+      }
+    };
+    prototype.init = function(data){
+      this.data = data;
+      return this.data.name = this._id;
+    };
+    prototype.edit = function(something, into){
+      if (!!this.data[something]) {
+        this.data[something] = into;
+        return this.send(something);
+      }
+    };
+    prototype.send = function(something){
+      return this.log("Should send '" + something + "' [" + this.data[something] + "]");
+    };
+    prototype.getData = function(){
+      var onsuccess, onerror, this$ = this;
+      onsuccess = function(data){
+        this$.data = data;
+      };
+      onerror = function(){
+        return Toast("Error", "Could not get the full recipe!");
+      };
+      if (!((typeof UserModel == 'undefined' || UserModel === null) || UserModel.data == null || UserModel.data.mail == null)) {
+        return Client.request("apps/" + this.data.id, onsuccess, onerror);
+      }
+    };
+    prototype.save = function(){
+      var onsuccess, onerror, data, this$ = this;
+      onsuccess = function(){
+        return Toast("Success", "The data was saved!");
+      };
+      onerror = function(){
+        return Toast("Error", "Could not save the data!");
+      };
+      if (!((typeof UserModel == 'undefined' || UserModel === null) || UserModel.data == null || UserModel.data.mail == null)) {
+        data = {};
+        import$(data, this.data);
+        data.author = UserModel.data.mail;
+        data.id = UserModel.data.mail + ":" + data.name;
+        if (data._id) {
+          delete data._id;
+        }
+        return Client.post("apps/update/", data, onsuccess, onerror);
+      }
+    };
+    RecipeModel['new'] = function(){
+      var x;
+      x = RecipeModel.reuse("New Recipe", __blankData__);
+      return x._id = "New Recipe";
+    };
+    function RecipeModel(){
+      this.save = bind$(this, 'save', prototype);
+      this.getData = bind$(this, 'getData', prototype);
+      this.send = bind$(this, 'send', prototype);
+      this.edit = bind$(this, 'edit', prototype);
+      this.init = bind$(this, 'init', prototype);
+      RecipeModel.superclass.apply(this, arguments);
+    }
+    return RecipeModel;
+  }(IS.Object));
+  angular.module(AppInfo.displayname).factory("Recipe", ["Runtime", RecipeModel.init]);
+  function bind$(obj, key, target){
+    return function(){ return (target || obj)[key].apply(obj, arguments) };
+  }
+  function extend$(sub, sup){
+    function fun(){} fun.prototype = (sub.superclass = sup).prototype;
+    (sub.prototype = new fun).constructor = sub;
+    if (typeof sup.extended == 'function') sup.extended(sub);
+    return sub;
+  }
+  function import$(obj, src){
+    var own = {}.hasOwnProperty;
+    for (var key in src) if (own.call(src, key)) obj[key] = src[key];
+    return obj;
+  }
+}).call(this);
+}, "classes/models/Document": function(exports, require, module) {(function(){
   var DocumentModel;
   DocumentModel = (function(superclass){
     var prototype = extend$((import$(DocumentModel, superclass).displayName = 'DocumentModel', DocumentModel), superclass).prototype, constructor = DocumentModel;
@@ -43615,45 +47639,7 @@ QRBitBuffer.prototype = {
   }
 }).call(this);
 }, "classes/models/RecipeModel": function(exports, require, module) {(function(){
-  var __dummyData__, __dummyList__, __blankData__, RecipeModel;
-  __dummyData__ = {
-    "NPM": {
-      name: "NPM",
-      description: "Install NPM",
-      author: "sabinmarcu@gmail.com",
-      stubs: [{
-        url: "http://npmjs.org/install.sh",
-        instructions: ["sh install.sh"]
-      }]
-    },
-    "Node": {
-      name: "Node",
-      description: "Install Node.JS",
-      author: "sabinmarcu@gmail.com",
-      stubs: [
-        {
-          url: "http://nodejs.org/install.tar.gz",
-          instructions: [
-            {
-              command: "tar -xvzf install.tar.gz"
-            }, {
-              command: "cd install"
-            }, {
-              command: "./configure"
-            }, {
-              command: "make"
-            }, {
-              command: "make install"
-            }
-          ]
-        }, {
-          url: "sabinmarcu@gmail.com/NPM",
-          instructions: []
-        }
-      ]
-    }
-  };
-  __dummyList__ = ['NPM', 'Node'];
+  var __blankData__, RecipeModel;
   __blankData__ = {
     description: "something",
     stubs: []
@@ -43661,23 +47647,68 @@ QRBitBuffer.prototype = {
   RecipeModel = (function(superclass){
     var prototype = extend$((import$(RecipeModel, superclass).displayName = 'RecipeModel', RecipeModel), superclass).prototype, constructor = RecipeModel;
     RecipeModel.extend(IS.Modules.ORM);
-    RecipeModel.init = function(list){
-      var ref$, i$, len$, item, results$ = [];
-      RecipeModel.list = list != null ? list : __dummyList__;
+    RecipeModel.init = function(runtime){
+      var all;
+      RecipeModel.runtime = runtime;
       window.RecipeRepo = RecipeModel;
-      RecipeModel._reccords = {};
-      if ((ref$ = RecipeModel.controller) != null) {
-        ref$.recipes = RecipeModel._reccords;
-      }
-      for (i$ = 0, len$ = (ref$ = RecipeModel.list).length; i$ < len$; ++i$) {
-        item = ref$[i$];
-        results$.push((fn$.call(RecipeModel, item, item)));
-      }
-      return results$;
-      function fn$(i, item){
-        var x;
-        x = this.reuse(i, __blankData__);
-        return x._id = i;
+      all = true;
+      RecipeModel.runtime.subscribe("prop-active-tab-change", function(){
+        switch (RecipeModel.runtime.props['active-tab']) {
+        case 3:
+          return RecipeModel.refresh();
+        case 1:
+          return RecipeModel.refresh(all);
+        }
+      });
+      RecipeModel.runtime.subscribe("prop-app-state-change", function(){
+        if (RecipeModel.runtime.props['app-state'] === 1) {
+          switch (RecipeModel.runtime.props['active-tab']) {
+          case 3:
+            return RecipeModel.refresh();
+          case 1:
+            return RecipeModel.refresh(all);
+          }
+        }
+      });
+      return RecipeModel;
+    };
+    RecipeModel.refresh = function(all){
+      var onsuccess, onerror;
+      all == null && (all = false);
+      onsuccess = function(list){
+        var ref$, i$, len$, item;
+        RecipeModel.list = list;
+        RecipeModel.log(RecipeModel.list);
+        RecipeModel._reccords = {};
+        if ((ref$ = RecipeModel.controller) != null) {
+          ref$.recipes = RecipeModel._reccords;
+        }
+        RecipeModel.recipes = [];
+        for (i$ = 0, len$ = (ref$ = RecipeModel.list).length; i$ < len$; ++i$) {
+          item = ref$[i$];
+          (fn$.call(RecipeModel, item, item));
+        }
+        return (ref$ = RecipeModel.controller) != null ? ref$.safeApply() : void 8;
+        function fn$(i, item){
+          var x, ref$;
+          if (i._id) {
+            delete i._id;
+          }
+          x = this.create(i.name, item);
+          x._id = i.name;
+          (ref$ = x.data).stubs == null && (ref$.stubs = []);
+          this.recipes.push(x);
+        }
+      };
+      onerror = function(){
+        return Toast("Error", "Could not get the list of stuff!");
+      };
+      if (!((typeof UserModel == 'undefined' || UserModel === null) || UserModel.data == null || UserModel.data.mail == null)) {
+        if (all) {
+          return Client.request("apps", onsuccess, onerror);
+        } else {
+          return Client.request("users/" + UserModel.data.mail + "/apps", onsuccess, onerror);
+        }
       }
     };
     prototype.init = function(data){
@@ -43694,15 +47725,45 @@ QRBitBuffer.prototype = {
       return this.log("Should send '" + something + "' [" + this.data[something] + "]");
     };
     prototype.getData = function(){
-      this.data = __dummyData__[this._id] || this.data;
-      return this.log("Should get them online");
+      var onsuccess, onerror, this$ = this;
+      onsuccess = function(data){
+        this$.data = data;
+      };
+      onerror = function(){
+        return Toast("Error", "Could not get the full recipe!");
+      };
+      if (!((typeof UserModel == 'undefined' || UserModel === null) || UserModel.data == null || UserModel.data.mail == null)) {
+        return Client.request("apps/" + this.data.id, onsuccess, onerror);
+      }
+    };
+    prototype.save = function(){
+      var onsuccess, onerror, data, this$ = this;
+      onsuccess = function(){
+        return Toast("Success", "The data was saved!");
+      };
+      onerror = function(){
+        return Toast("Error", "Could not save the data!");
+      };
+      if (!((typeof UserModel == 'undefined' || UserModel === null) || UserModel.data == null || UserModel.data.mail == null)) {
+        data = {};
+        import$(data, this.data);
+        data.author = UserModel.data.mail;
+        data.id = UserModel.data.mail + "$" + data.name;
+        if (data._id) {
+          delete data._id;
+        }
+        return Client.post("apps/update/", data, onsuccess, onerror);
+      }
     };
     RecipeModel['new'] = function(){
       var x;
-      x = RecipeModel.reuse("New Recipe", __blankData__);
-      return x._id = "New Recipe";
+      x = RecipeModel.create("New Recipe", __blankData__);
+      x._id = "New Recipe";
+      RecipeModel.recipes == null && (RecipeModel.recipes = []);
+      return RecipeModel.recipes.push(x);
     };
     function RecipeModel(){
+      this.save = bind$(this, 'save', prototype);
       this.getData = bind$(this, 'getData', prototype);
       this.send = bind$(this, 'send', prototype);
       this.edit = bind$(this, 'edit', prototype);
@@ -43711,10 +47772,7 @@ QRBitBuffer.prototype = {
     }
     return RecipeModel;
   }(IS.Object));
-  RecipeModel.init();
-  angular.module(AppInfo.displayname).factory("Recipe", function(){
-    return RecipeModel;
-  });
+  angular.module(AppInfo.displayname).factory("Recipe", ["Runtime", RecipeModel.init]);
   function bind$(obj, key, target){
     return function(){ return (target || obj)[key].apply(obj, arguments) };
   }
@@ -43734,8 +47792,9 @@ QRBitBuffer.prototype = {
   var UserModel;
   UserModel = (function(superclass){
     var prototype = extend$((import$(UserModel, superclass).displayName = 'UserModel', UserModel), superclass).prototype, constructor = UserModel;
-    function UserModel(){
-      var form, loginFunc, this$ = this instanceof ctor$ ? this : new ctor$;
+    function UserModel(runtime){
+      var form, loginFunc, regform, registerFunc, this$ = this instanceof ctor$ ? this : new ctor$;
+      this$.runtime = runtime;
       this$.verifyEmail = bind$(this$, 'verifyEmail', prototype);
       this$.verifyPassword = bind$(this$, 'verifyPassword', prototype);
       this$.send = bind$(this$, 'send', prototype);
@@ -43750,15 +47809,67 @@ QRBitBuffer.prototype = {
         };
         if (data.mail !== "" && data.pass !== "") {
           return Client.login(data, function(){
+            var onsuccess, onerror;
             this$.data = data;
+            this$.runtime.set('app-state', 1);
             form.find('#login-email').val("");
-            return form.find('#login-password').val("");
+            form.find('#login-password').val("");
+            onsuccess = function(list){
+              var i$, ref$, len$, device, results$ = [];
+              this$.data.devices = list[0].user_devices.filter(function(e, pos, self){
+                return self.indexOf(e) === pos;
+              });
+              this$.devices = {};
+              for (i$ = 0, len$ = (ref$ = this$.data.devices).length; i$ < len$; ++i$) {
+                device = ref$[i$];
+                results$.push((fn$.call(this$, device, device)));
+              }
+              return results$;
+              function fn$(d, device){
+                var this$ = this;
+                return Client.request("devices/" + d, function(it){
+                  return this$.devices[d] = it;
+                }, function(){
+                  return Toast("Error", "Could not get info about " + d + " device");
+                });
+              }
+            };
+            onerror = function(){
+              return Toast("Error", "Could not grab the devices list.");
+            };
+            return Client.request("users/devices/" + this$.data.mail, onsuccess, onerror);
           });
+        }
+      };
+      regform = $('#register-form');
+      registerFunc = function(){
+        var data;
+        data = {
+          mail: regform.find('#register-email').val(),
+          pass: regform.find('#register-pass').val(),
+          verpass: regform.find('#register-pass-verify').val()
+        };
+        this$.log(data);
+        if (data.mail !== "" && data.pass !== "" && data.verpass !== "") {
+          if (data.pass !== data.verpass) {
+            return Toast("Error", "The two passwords were different");
+          } else {
+            return Client.register(data, function(){
+              regform.find('#register-email').val("");
+              regform.find('#register-pass').val("");
+              return regform.find('#register-pass-verify').val("");
+            });
+          }
         }
       };
       form.find('#submit-button').click(loginFunc);
       form.find('#login-email').change(loginFunc);
       form.find('#login-password').change(loginFunc);
+      regform.find('#submit-button').click(registerFunc);
+      regform.find('#register-email').change(registerFunc);
+      regform.find('#register-pass').change(registerFunc);
+      regform.find('#register-pass-verify').change(registerFunc);
+      this$;
       return this$;
     } function ctor$(){} ctor$.prototype = prototype;
     prototype.edit = function(something, into){
@@ -43778,7 +47889,7 @@ QRBitBuffer.prototype = {
     };
     return UserModel;
   }(IS.Object));
-  angular.module(AppInfo.displayname).value("User", UserModel);
+  angular.module(AppInfo.displayname).service("User", ["Runtime", UserModel]);
   function bind$(obj, key, target){
     return function(){ return (target || obj)[key].apply(obj, arguments) };
   }
@@ -44349,11 +48460,15 @@ return window.JSONImport['ro-RO'] = module.exports = item;}, "data/stylesheets/f
   }
   (function() {
     (function() {
-      __out.push('<h1 ');
+      __out.push('<div id="recipies-container" ng-controller="ApplicationsController">\n\t<h1 ');
     
       __out.push(__sanitize(_T("Applications")));
     
-      __out.push('></h1>');
+      __out.push('></h1>\n\t<input type="search" ng-model="searchTerms.data" ');
+    
+      __out.push(__sanitize(_T("Search", "placeholder")));
+    
+      __out.push('>\n\t<article ng-repeat="recipe in recipeModel.recipes | filter:searchTerms" ng-show="runtime.props[\'active-tab\'] == 1">\n\t\t<h2 ng-bind="recipe._id"></h2>\n\t\t<select ng-change="installApp(recipe)" ng-model="info.device" ng-options="device.name for (key, device) in user.devices"></select>\n\t</article>\n</div>ac');
     
     }).call(this);
     
@@ -44403,7 +48518,11 @@ return window.JSONImport['ro-RO'] = module.exports = item;}, "data/stylesheets/f
     
       __out.push(__sanitize(_T("Your Recipes")));
     
-      __out.push('></h1>\n\t<article ng-repeat="(uuid, recipe) in recipes">\n\t\t<h2 ng-bind="recipe._id"></h2>\n\t\t<nav>\n\t\t\t<li ng-click="toggleEditing(recipe)"><i class="icon-wrench"></i></li>\n\t\t\t<li ng-click="remove(recipe)"><i class="icon-remove"></i></li>\n\t\t</nav>\n\t\t<div ng-class="{true: \'active\', false: \'inactive\', undefined: \'inactive\'}[recipe.editing]">\n\t\t\t<label for="recipe-name-{{recipe._uuid}}">\n\t\t\t\t<span ');
+      __out.push('></h1>\n\t<input type="search" ng-model="searchTerms.data" ');
+    
+      __out.push(__sanitize(_T("Search", "placeholder")));
+    
+      __out.push('>\n\t<article ng-repeat="recipe in recipeModel.recipes | filter:searchTerms" ng-show="runtime.props[\'active-tab\'] == 3">\n\t\t<h2 ng-bind="recipe._id"></h2>\n\t\t<nav>\n\t\t\t<li ng-click="toggleEditing(recipe)"><i class="icon-wrench"></i></li>\n\t\t\t<li ng-click="remove(recipe)"><i class="icon-remove"></i></li>\n\t\t</nav>\n\t\t<div ng-class="{true: \'active\', false: \'inactive\', undefined: \'inactive\'}[recipe.editing]">\n\t\t\t<label for="recipe-name-{{recipe._uuid}}">\n\t\t\t\t<span ');
     
       __out.push(__sanitize(_T("The name of the recipe")));
     
@@ -44411,7 +48530,7 @@ return window.JSONImport['ro-RO'] = module.exports = item;}, "data/stylesheets/f
     
       __out.push(__sanitize(_T("Recipe Name", "placeholder")));
     
-      __out.push(' >\n\t\t\t</label>\n\t\t\t<article ng-repeat="stub in recipe.data.stubs">\n\t\t\t\t<label for="recipe-stub-{{recipe._uuid}}">\n\t\t\t\t\t<span ');
+      __out.push(' ng-change="recipe.data.name = recipe._id" >\n\t\t\t</label>\n\t\t\t<article ng-repeat="stub in recipe.data.stubs">\n\t\t\t\t<label for="recipe-stub-{{recipe._uuid}}">\n\t\t\t\t\t<span ');
     
       __out.push(__sanitize(_T("The URL of the dependency")));
     
@@ -44427,7 +48546,11 @@ return window.JSONImport['ro-RO'] = module.exports = item;}, "data/stylesheets/f
     
       __out.push(__sanitize(_T("Instruction", "placeholder")));
     
-      __out.push('>\n\t\t\t\t\t\t</label>\n\t\t\t\t\t\t<nav>\n\t\t\t\t\t\t\t<li ng-click="removeInstruction(instruction, stub.instructions)"><i class="icon-remove"></i></li>\n\t\t\t\t\t\t</nav>\n\t\t\t\t\t</li>\n\t\t\t\t\t<nav class="add">\n\t\t\t\t\t\t<li ng-click="addInstruction(stub.instructions)"><i class="icon-plus"></i></li>\n\t\t\t\t\t</nav>\n\t\t\t\t</div>\n\t\t\t\t<nav>\n\t\t\t\t\t<li ng-click="removeStub(stub, recipe.data.stubs)"><i class="icon-remove"></i></li>\n\t\t\t\t</nav>\n\t\t\t</article>\n\t\t\t<nav class="add">\n\t\t\t\t<li ng-click="addStub(recipe.data.stubs)"><i class="icon-plus"></i></li>\n\t\t\t</nav>\n\t\t</div>\n\t</article>\n\t<nav class="add">\n\t\t<li ng-click="addRecipe()"><i class="icon-plus"></i></li>\n\t</nav>\n</div>');
+      __out.push('>\n\t\t\t\t\t\t</label>\n\t\t\t\t\t\t<nav>\n\t\t\t\t\t\t\t<li ng-click="removeInstruction(instruction, stub.instructions)"><i class="icon-remove"></i></li>\n\t\t\t\t\t\t</nav>\n\t\t\t\t\t</li>\n\t\t\t\t\t<nav class="add">\n\t\t\t\t\t\t<li ng-click="addInstruction(stub.instructions)"><i class="icon-plus"></i></li>\n\t\t\t\t\t</nav>\n\t\t\t\t</div>\n\t\t\t\t<nav>\n\t\t\t\t\t<li ng-click="removeStub(stub, recipe.data.stubs)"><i class="icon-remove"></i></li>\n\t\t\t\t</nav>\n\t\t\t</article>\n\t\t\t<nav class="add">\n\t\t\t\t<li ng-click="addStub(recipe.data)"><i class="icon-plus"></i></li>\n\t\t\t</nav>\n\t\t\t<button class="save" ng-click=\'recipe.save()\' ');
+    
+      __out.push(__sanitize(_T("Save")));
+    
+      __out.push('></button>\n\t\t</div>\n\t</article>\n\t<nav class="add">\n\t\t<li ng-click="addRecipe()"><i class="icon-plus"></i></li>\n\t</nav>\n</div>');
     
     }).call(this);
     
@@ -44473,11 +48596,15 @@ return window.JSONImport['ro-RO'] = module.exports = item;}, "data/stylesheets/f
   }
   (function() {
     (function() {
-      __out.push('<h1 ');
+      __out.push('<div id="recipes-container" ng-controller="DevicesController">\n\t<h1 ');
     
       __out.push(__sanitize(_T("Devices Management")));
     
-      __out.push('></h1>');
+      __out.push('></h1>\n\t<input type="search" ng-model="searchTerms.data" ');
+    
+      __out.push(__sanitize(_T("Search", "placeholder")));
+    
+      __out.push('>\n\t<article ng-repeat="recipe in recipeModel.recipes | filter:searchTerms">\n\t\t<h2 ng-bind="recipe._id"></h2>\n\t</article>\n</div>');
     
     }).call(this);
     
@@ -45385,7 +49512,7 @@ return window.JSONImport['ro-RO'] = module.exports = item;}, "data/stylesheets/f
   }
   (function() {
     (function() {
-      __out.push('<div ng-controller="Landing" id="landingpage">\n\t<section>\n\t  <header>\n\t  \t<h1 class="left">Raspr</h1>\n\t  \t<img src="');
+      __out.push('<div ng-controller="Landing" id="landingpage">\n\t<section>\n\t  <header>\n\t  \t<h1 class="left">Rasp</h1>\n\t  \t<img src="');
     
       __out.push(__sanitize(DepMan.image("logo")));
     
@@ -45743,7 +49870,7 @@ return window.JSONImport['ro-RO'] = module.exports = item;}, "data/stylesheets/f
   }
   (function() {
     (function() {
-      __out.push('<div class="container">\n\t<h1 ');
+      __out.push('<div class="container" id="register-form">\n\t<h1 ');
     
       __out.push(__sanitize(_T("Register")));
     
@@ -45763,7 +49890,7 @@ return window.JSONImport['ro-RO'] = module.exports = item;}, "data/stylesheets/f
     
       __out.push(__sanitize(_T("Submit")));
     
-      __out.push('></button>\n\t</div>\n</div>');
+      __out.push(' id="submit-button"></button>\n\t</div>\n</div>');
     
     }).call(this);
     
@@ -49557,7 +53684,7 @@ window.isDev = true;(function() {
 window.addEventListener('load', (function(){
 	window.getStylesheets = function() {
 		element = document.createElement('style');
-		element.innerHTML = "body,html {  overflow: hidden;  width: 100%;  height: 100%;  margin: 0;  padding: 0;}body {  width: 100%;  height: 100%;  font-size: 10pt;  font-family: Roboto, sans-serif;  color: #242424;  background: #100;}@font-face {  font-family: 'Open Sans';  font-style: normal;  font-weight: 300;  src: local('Open Sans Light'), local('OpenSans-Light'), url('<<INSERT OPEN SANS 300 WOFF HERE>>') format('woff');}@font-face {  font-family: 'Open Sans';  font-style: normal;  font-weight: 400;  src: local('Open Sans'), local('OpenSans'), url('<<INSERT OPEN SANS 400 WOFF HERE>>') format('woff');}@font-face {  font-family: 'Electrolize';  font-style: normal;  font-weight: 400;  src: local('Electrolize'), local('Electrolize-Regular'), url('<<INSERT ELECTROLIZE WOFF HERE>>') format('woff');}@font-face {  font-family: 'Roboto';  font-style: normal;  font-weight: 100;  src: local('Roboto Thin'), local('Roboto-Thin'), url('<<INSERT ROBOTO 100 WOFF HERE>>') format('woff');}@font-face {  font-family: 'Roboto';  font-style: normal;  font-weight: 400;  src: local('Roboto Regular'), local('Roboto-Regular'), url('<<INSERT ROBOTO 400 WOFF HERE>>') format('woff');}body #appwrapper > section {  position: absolute;  font-weight: 100;  z-index: 1;  left: 0;  top: 0;  bottom: 0;  right: 0;  -webkit-perspective: 1600px;  -moz-perspective: 1600px;  -ms-perspective: 1600px;  perspective: 1600px;  -webkit-transition: all 1s ease-in-out;  -moz-transition: all 1s ease-in-out;  -o-transition: all 1s ease-in-out;  -ms-transition: all 1s ease-in-out;  transition: all 1s ease-in-out;  font-family: Roboto;  overflow: hidden;}body #appwrapper > section#help {  background: rgba(0,0,0,0.9);  z-index: 3;  -webkit-transform: translateY(-100%);  -moz-transform: translateY(-100%);  -o-transform: translateY(-100%);  -ms-transform: translateY(-100%);  transform: translateY(-100%);}body #appwrapper > section#help .dragger {  background: rgba(0,0,0,0.8);  border-color: #000;  color: #fff;  bottom: 0;  left: 25px;  border-bottom-right-radius: 0;  border-bottom-left-radius: 0;  border-bottom: none;}body #appwrapper > section#help .wrapper {  display: table;  width: 100%;  height: 100%;  text-align: center;}body #appwrapper > section#help .wrapper aside {  position: absolute;  top: 0;  bottom: 0;  width: 15%;  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;  background: rgba(255,255,255,0.1);}body #appwrapper > section#help .wrapper aside.right {  right: 0;}body #appwrapper > section#help .wrapper aside.left {  left: 0;}body #appwrapper > section#help .wrapper aside:hover {  background: rgba(255,255,255,0.2);}body #appwrapper > section#help .wrapper nav {  position: absolute;  top: 70%;  width: 500px;  left: 50%;  margin-left: -250px;  text-align: center;}body #appwrapper > section#help .wrapper nav li {  display: inline-block;  width: 0;  height: 0;  border: solid 5px rgba(255,255,255,0.4);  -webkit-border-radius: 100%;  border-radius: 100%;  margin: 10px;  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;}body #appwrapper > section#help .wrapper nav li:hover {  border-color: rgba(255,255,255,0.6);}body #appwrapper > section#help .wrapper nav li.active {  border-color: #fff;}body #appwrapper > section#help .wrapper section {  position: absolute;  height: 40%;  top: 20%;  left: 50%;  margin-left: -250px;  width: 500px;  -webkit-box-shadow: 0 0 50px rgba(0,0,0,0.1);  box-shadow: 0 0 50px rgba(0,0,0,0.1);  overflow: hidden;  -webkit-border-radius: 4px;  border-radius: 4px;  -webkit-perspective: 200px;  -moz-perspective: 200px;  -ms-perspective: 200px;  perspective: 200px;}body #appwrapper > section#help .wrapper section article {  position: absolute;  left: 0;  right: 0;  top: 0;  bottom: 0;  padding: 25px;  color: #fff;  text-shadow: 0 1px 1px #000;  -webkit-transform: translateX(-200%) rotateY(90deg);  -moz-transform: translateX(-200%) rotateY(90deg);  -o-transform: translateX(-200%) rotateY(90deg);  -ms-transform: translateX(-200%) rotateY(90deg);  transform: translateX(-200%) rotateY(90deg);  -webkit-transition: all 1s ease-in-out;  -moz-transition: all 1s ease-in-out;  -o-transition: all 1s ease-in-out;  -ms-transition: all 1s ease-in-out;  transition: all 1s ease-in-out;  text-align: left;  text-indent: 25px;  -webkit-box-shadow: 0 0 50px rgba(100,100,100,0.1) inset;  box-shadow: 0 0 50px rgba(100,100,100,0.1) inset;}body #appwrapper > section#help .wrapper section article.active {  -webkit-transform: translateX(0) rotateY(0);  -moz-transform: translateX(0) rotateY(0);  -o-transform: translateX(0) rotateY(0);  -ms-transform: translateX(0) rotateY(0);  transform: translateX(0) rotateY(0);  background: rgba(100,100,100,0.1);}body #appwrapper > section#help .wrapper section article.active ~ article {  -webkit-transform: translateX(200%) rotateY(-90deg);  -moz-transform: translateX(200%) rotateY(-90deg);  -o-transform: translateX(200%) rotateY(-90deg);  -ms-transform: translateX(200%) rotateY(-90deg);  transform: translateX(200%) rotateY(-90deg);}body #appwrapper > section#help .wrapper section article .key {  display: inline-block;  background: #fff;  border: solid 2px #aaa;  border-top: none;  border-bottom-width: 3px;  -webkit-border-radius: 4px;  border-radius: 4px;  color: #444;  text-shadow: none;  font-weight: normal;  text-indent: 0;  padding: 2px 4px;}body #appwrapper > section#landing {  background: #fff;  overflow: auto;  -webkit-transform: scale(0.8) translateX(-150%);  -moz-transform: scale(0.8) translateX(-150%);  -o-transform: scale(0.8) translateX(-150%);  -ms-transform: scale(0.8) translateX(-150%);  transform: scale(0.8) translateX(-150%);}body #appwrapper > section#landing section {  height: 600px;  position: relative;  color: #444;  overflow: hidden;}body #appwrapper > section#landing section h1 {  display: block;  margin: 10px 0 0;  padding: 0;  font-size: 24pt;}body #appwrapper > section#landing section:nth-child(2n + 1) {  background: #222;  color: #d62b00;}body #appwrapper > section#landing section:nth-child(2n) > * {  color: #08d;}body #appwrapper > section#landing section:first-child {  height: 300px;}body #appwrapper > section#landing section#raspmenu {  height: 390px;}body #appwrapper > section#landing section > .container {  margin: 0 auto;  width: 1000px;}body #appwrapper > section#landing header {  background: #d62b00;  text-align: center;  height: 100%;  color: #000;}body #appwrapper > section#landing header img,body #appwrapper > section#landing header h1 {  line-height: 300px;  display: inline;  margin: 0;  padding: 0;  font-size: 72pt;  color: #fff;  text-shadow: 0 1px 1px #000;  vertical-align: middle;  padding: 10px;  font-family: Roboto;}body #appwrapper > section#landing nav {  color: #000;  background: #fff;  text-align: center;  position: absolute;  left: 50%;  top: 50px;  margin: 0 -180px;  width: 320px;  height: 250px;  background: #d62b00;  border: solid 10px #ffb5a3;  border-top-left-radius: 450px;  border-top-right-radius: 450px;  border-bottom-left-radius: 550px 800px;  border-bottom-right-radius: 550px 800px;  padding: 20px;  -webkit-transition: border-color 0.5s ease-in-out;  -moz-transition: border-color 0.5s ease-in-out;  -o-transition: border-color 0.5s ease-in-out;  -ms-transition: border-color 0.5s ease-in-out;  transition: border-color 0.5s ease-in-out;}body #appwrapper > section#landing nav h1 {  font-size: 42pt;  color: rgba(255,255,255,0.4);  text-transform: uppercase;  padding: 50px;  margin: 0;  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;}body #appwrapper > section#landing nav:hover {  border-color: #ffded6;}body #appwrapper > section#landing nav:hover h1 {  text-shadow: 0 1px 1px #000;  color: #fff;}body #appwrapper > section#landing aside {  position: absolute;  top: 50px;  left: 50px;  right: 50px;  bottom: 50px;  color: #000;}body #appwrapper > section#landing aside:first-of-type {  right: 50%;  padding-right: 230px;}body #appwrapper > section#landing aside:last-of-type {  left: 50%;  padding-left: 230px;}body #appwrapper > section#landing aside .container {  overflow: hidden;  background: #08d;  border: solid 10px #c4e8ff;  position: relative;  padding: 0;  margin: 0;  height: 100%;  -webkit-box-shadow: 0 0 10px rgba(0,0,0,0.3) inset;  box-shadow: 0 0 10px rgba(0,0,0,0.3) inset;}body #appwrapper > section#landing aside .container > * {  padding: 5px 15px;  margin: 0;}body #appwrapper > section#landing aside .container h1 {  color: #fff;  background: #0069aa;  height: 45px;  line-height: 45px;  text-shadow: 0 1px 1px #000;}body #appwrapper > section#landing aside .container .content {  padding-bottom: 20px;  position: absolute;  left: 0;  right: 0;  bottom: 0;  top: 55px;  padding-top: 5px;  padding: 5px 0;  background: rgba(255,255,255,0.4);}body #appwrapper > section#landing aside .container .content input,body #appwrapper > section#landing aside .container .content button {  width: 100%;  padding: 15px 0;  margin: 10px 0 0 0;  line-height: 15px;  height: 15px;  background: #fff;  border: none;  border-bottom: solid 1px #ccc;  background: rgba(255,255,255,0.8);  text-indent: 5px;  outline: none;  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;}body #appwrapper > section#landing aside .container .content input:hover,body #appwrapper > section#landing aside .container .content button:hover {  background: #fff;}body #appwrapper > section#landing aside .container .content button {  position: absolute;  bottom: 0;  left: 0;  right: 0;  height: 25px;  padding: 15px 0 30px 0;  text-indent: 0;}body #appwrapper > section#application {  background: #444;  z-index: 2;  -webkit-transform: translateX(150%) scale(0.8);  -moz-transform: translateX(150%) scale(0.8);  -o-transform: translateX(150%) scale(0.8);  -ms-transform: translateX(150%) scale(0.8);  transform: translateX(150%) scale(0.8);}body #appwrapper > section#application aside,body #appwrapper > section#application section {  position: absolute;  top: 0;  bottom: 0;  left: 0;  right: 0;}body #appwrapper > section#application aside {  left: 0;  right: auto;  width: 300px;  background: #222;  color: #fff;  -webkit-transform: translateX(-150px) scale(0.8);  -moz-transform: translateX(-150px) scale(0.8);  -o-transform: translateX(-150px) scale(0.8);  -ms-transform: translateX(-150px) scale(0.8);  transform: translateX(-150px) scale(0.8);  -webkit-transition: all 1s ease-in-out;  -moz-transition: all 1s ease-in-out;  -o-transition: all 1s ease-in-out;  -ms-transition: all 1s ease-in-out;  transition: all 1s ease-in-out;}body #appwrapper > section#application aside.active {  -webkit-transform: none;  -moz-transform: none;  -o-transform: none;  -ms-transform: none;  transform: none;}body #appwrapper > section#application aside h1 {  height: 40px;  line-height: 30px;  font-size: 24pt;  border-bottom: solid 2px #999;  margin-bottom: 75px;  text-indent: 25px;}body #appwrapper > section#application aside > li {  display: block;  padding: 15px 15px;  font-size: 14pt;  border-bottom: solid 1px #444;  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;  color: #d62b00;}body #appwrapper > section#application aside > li i {  margin-right: 15px;}body #appwrapper > section#application aside > li:first-of-type {  border-top: solid 1px #444;}body #appwrapper > section#application aside > li:hover {  background: rgba(255,255,255,0.1);}body #appwrapper > section#application aside > li.active {  color: #08d;  background: rgba(255,255,255,0.8);}body #appwrapper > section#application aside > li.active:hover {  background: #fff;}body #appwrapper > section#application section {  background: #fff;  -webkit-transform: translateX(300px) scale(1.2);  -moz-transform: translateX(300px) scale(1.2);  -o-transform: translateX(300px) scale(1.2);  -ms-transform: translateX(300px) scale(1.2);  transform: translateX(300px) scale(1.2);  -webkit-transform-origin: left center;  -moz-transform-origin: left center;  -o-transform-origin: left center;  -ms-transform-origin: left center;  transform-origin: left center;  overflow: hidden;  -webkit-box-shadow: 0 0 15px #000;  box-shadow: 0 0 15px #000;  -webkit-transition: all 1s ease-in-out;  -moz-transition: all 1s ease-in-out;  -o-transition: all 1s ease-in-out;  -ms-transition: all 1s ease-in-out;  transition: all 1s ease-in-out;  background: #222;}body #appwrapper > section#application section.active {  -webkit-transform: none;  -moz-transform: none;  -o-transform: none;  -ms-transform: none;  transform: none;}body #appwrapper > section#application section > article {  position: absolute;  top: 0;  bottom: 0;  left: 0;  right: 0;  -webkit-transition: all 1s ease-in-out;  -moz-transition: all 1s ease-in-out;  -o-transition: all 1s ease-in-out;  -ms-transition: all 1s ease-in-out;  transition: all 1s ease-in-out;  -webkit-transform: translateX(-110%);  -moz-transform: translateX(-110%);  -o-transform: translateX(-110%);  -ms-transform: translateX(-110%);  transform: translateX(-110%);  padding: 25px;  background: #fff;}body #appwrapper > section#application section > article.active {  -webkit-transform: none;  -moz-transform: none;  -o-transform: none;  -ms-transform: none;  transform: none;}body #appwrapper > section#application section > article.active ~ article {  -webkit-transform: translateX(110%);  -moz-transform: translateX(110%);  -o-transform: translateX(110%);  -ms-transform: translateX(110%);  transform: translateX(110%);}body #appwrapper > section#application section > article h1 {  margin: -25px -25px 0;  padding: 15px;  font-size: 20pt;  color: #d62b00;  border-bottom: solid 1px #d62b00;  -webkit-box-shadow: 0 0 5px rgba(0,0,0,0.2);  box-shadow: 0 0 5px rgba(0,0,0,0.2);  background: #222;  font-weight: 100;}body #appwrapper > section#application section > article .form {  display: block;  margin: 50px 0 0 0;  padding: 25px;  border: solid 5px #ddf2ff;  padding-bottom: 75px;  position: relative;}body #appwrapper > section#application section > article .form hr {  border: none;  border-top: solid 1px #ddf2ff;  margin: 25px -25px;  clear: both;}body #appwrapper > section#application section > article .form br {  clear: both;}body #appwrapper > section#application section > article .form label {  display: block;  overflow: hidden;  clear: both;  background: transparent;}body #appwrapper > section#application section > article .form label span,body #appwrapper > section#application section > article .form label input {  display: inline-block;  float: left;  padding: 7px 0;  margin: 0 0 20px;}body #appwrapper > section#application section > article .form label span:last-of-type,body #appwrapper > section#application section > article .form label input:last-of-type {  margin: 0;}body #appwrapper > section#application section > article .form label span {  width: 30%;}body #appwrapper > section#application section > article .form label input {  width: 65%;}body #appwrapper > section#application section > article .form button {  display: block;  background: #77cbff;  border: none;  position: absolute;  bottom: -5px;  left: -5px;  right: -5px;  height: 50px;  line-height: 50px;  color: rgba(255,255,255,0.7);  margin: 0;  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;}body #appwrapper > section#application section > article .form button:hover {  background: #08d;  color: #fff;}body #appwrapper > section#application section > article #recipies-container nav {  position: absolute;  top: 0;  right: 0;  height: 25px;}body #appwrapper > section#application section > article #recipies-container nav li {  list-style: none;  float: right;  display: inline-block;  height: 25px;  width: 25px;  text-align: center;  line-height: 25px;  font-size: 12pt;  margin: 5px 10px;}body #appwrapper > section#application section > article #recipies-container nav.add {  display: block;  position: relative;}body #appwrapper > section#application section > article #recipies-container nav.add li {  width: 100%;}body #appwrapper > section#application section > article #recipies-container article,body #appwrapper > section#application section > article #recipies-container label,body #appwrapper > section#application section > article #recipies-container div,body #appwrapper > section#application section > article #recipies-container li {  display: block;  position: relative;}body #appwrapper > section#application section > article #recipies-container .active {  display: block;}body #appwrapper > section#application section > article #recipies-container .inactive {  display: none;}body #appwrapper > section#application section > article #recipies-container article article {  padding-left: 25px;}body #appwrapper > section#application section > article #recipies-container article {  background: #fff;  border: solid 5px #ddf2ff;  padding: 5px 10px;  margin: 10px 0;}body #appwrapper > section#application section > article #recipies-container article article {  background: #aadeff;}body #appwrapper.landing section#landing,body #appwrapper.help section#help,body #appwrapper.application section#application,body #appwrapper.settings section#settings {  -webkit-transform: none;  -moz-transform: none;  -o-transform: none;  -ms-transform: none;  transform: none;}body #appwrapper.help section#help ~ section#application,body #appwrapper.settings section#settings ~ section#application {  -webkit-transform: none;  -moz-transform: none;  -o-transform: none;  -ms-transform: none;  transform: none;}body #appwrapper {  position: relative;  width: 100%;  height: 100%;  -webkit-perspective: 1600px;  -moz-perspective: 1600px;  -ms-perspective: 1600px;  perspective: 1600px;  -webkit-perspective-origin: bottom center;  -moz-perspective-origin: bottom center;  -ms-perspective-origin: bottom center;  perspective-origin: bottom center;  -webkit-transition: all 1s ease-in-out;  -moz-transition: all 1s ease-in-out;  -o-transition: all 1s ease-in-out;  -ms-transition: all 1s ease-in-out;  transition: all 1s ease-in-out;  font-family: Roboto;  font-weight: 100;  overflow: hidden;}body #modal-window {  position: absolute;  left: 0;  right: 0;  top: 0;  bottom: 0;  -webkit-transition: all 1s ease-in-out;  -moz-transition: all 1s ease-in-out;  -o-transition: all 1s ease-in-out;  -ms-transition: all 1s ease-in-out;  transition: all 1s ease-in-out;  background: rgba(0,0,0,0);  z-index: -1;}body #modal-window section {  position: absolute;  left: 50%;  top: 50%;  right: 50%;  bottom: 50%;  -webkit-border-radius: 2px;  border-radius: 2px;  width: 480px;  height: 290px;  margin: -150px 0 0 -250px;  -webkit-box-shadow: -1px 1px 5px rgba(0,0,0,0.4);  box-shadow: -1px 1px 5px rgba(0,0,0,0.4);  background: #fff;  -webkit-transform: scale(0.2);  -moz-transform: scale(0.2);  -o-transform: scale(0.2);  -ms-transform: scale(0.2);  transform: scale(0.2);  -webkit-transition: all 1s ease-in-out;  -moz-transition: all 1s ease-in-out;  -o-transition: all 1s ease-in-out;  -ms-transition: all 1s ease-in-out;  transition: all 1s ease-in-out;  opacity: 0;  filter: alpha(opacity=0);  -ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=0)';}body #modal-window section > * {  position: absolute;  left: 0;  right: 0;}body #modal-window section header {  top: 0;  height: 55px;  line-height: 55px;  overflow: hiden;  font-size: 18pt;  font-weight: 100;  padding-left: 10px;}body #modal-window section nav {  top: 10px;  right: 10px;}body #modal-window section nav li {  list-style: none;  margin: 5px;  display: inline-block;  float: right;  font-size: 12pt;}body #modal-window section article {  overflow: auto;  top: 70px;  bottom: 0;  padding: 0 20px 20px;}body #modal-window section article > div > div {  overflow: hidden;  clear: both;  min-height: 35px;  position: relative;}body #modal-window section article > div > div label {  height: 35px;  line-height: 35px;  float: left;}body #modal-window section article > div > div input,body #modal-window section article > div > div textarea {  width: 99%;  margin: 0;  padding: 5px 0;  text-indent: 5px;  outline: none;  border: solid 1px #ccc;  -webkit-box-shadow: 0 0 15px rgba(0,0,0,0.1) inset;  box-shadow: 0 0 15px rgba(0,0,0,0.1) inset;  color: #444;  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;}body #modal-window section article > div > div input:hover,body #modal-window section article > div > div textarea:hover,body #modal-window section article > div > div input:active,body #modal-window section article > div > div textarea:active,body #modal-window section article > div > div input:focus,body #modal-window section article > div > div textarea:focus {  -webkit-box-shadow: none;  box-shadow: none;  color: #111;}body #modal-window section article > div > div textarea {  height: 50px;}body #modal-window section article > div > div input[type='checkbox'] {  width: auto;  float: right;  -webkit-box-shadow: none;  box-shadow: none;  height: 35px;}body #modal-window section article > div > div input[type='button'] {  position: absolute;  left: 0;  right: 50%;  border: solid 1px #ccc;  background: -webkit-gradient(linear, left top, left bottom, color-stop(0, rgba(0,0,0,0)), color-stop(1, rgba(0,0,0,0.1)));  background: -webkit-linear-gradient(top, rgba(0,0,0,0) 0%, rgba(0,0,0,0.1) 100%);  background: -moz-linear-gradient(top, rgba(0,0,0,0) 0%, rgba(0,0,0,0.1) 100%);  background: -o-linear-gradient(top, rgba(0,0,0,0) 0%, rgba(0,0,0,0.1) 100%);  background: -ms-linear-gradient(top, rgba(0,0,0,0) 0%, rgba(0,0,0,0.1) 100%);  background: linear-gradient(top, rgba(0,0,0,0) 0%, rgba(0,0,0,0.1) 100%);  background-color: #fff;  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;  top: 0;  bottom: 0;  width: auto;}body #modal-window section article > div > div input[type='button']:hover {  background-color: #ccc;}body #modal-window section article > div > div input[type='button']:last-child {  right: 0;  left: 50%;}body #modal-window.fullscreen section {  width: 100%;  height: 100%;  margin: 0;  left: 0;  top: 0;  bottom: 0;  right: 0;}body .modal-active {  -webkit-transform: scale(0.9);  -moz-transform: scale(0.9);  -o-transform: scale(0.9);  -ms-transform: scale(0.9);  transform: scale(0.9);  -webkit-border-radius: 2px;  border-radius: 2px;  opacity: 0.8;  filter: alpha(opacity=80);  -ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=80)';  -webkit-filter: blur(2px);  -moz-filter: blur(2px);  -ms-filter: blur(2px);  -o-filter: blur(2px);  filter: blur(2px);}body .modal-active ~ #modal-container #modal-window {  background: rgba(0,0,0,0.2);  z-index: 1;}body .modal-active ~ #modal-container #modal-window section {  -webkit-transform: scale(1);  -moz-transform: scale(1);  -o-transform: scale(1);  -ms-transform: scale(1);  transform: scale(1);  opacity: 1;  -ms-filter: none;  filter: none;}@media (max-width:320px) {  body #modal-window section {    width: 300px;    margin-left: -150px;  }}body #appwrapper #application #sidebar-container > section {  display: inline-block;  position: fixed;  top: 0;  left: 0;  height: 75%;  max-height: 600px;  width: 250px;  background: #fff;  border-bottom-right-radius: 2px;  border: 1px solid #ccc;  border-left: none;  border-top: none;  -webkit-box-shadow: -1px 1px 5px rgba(0,0,0,0.4);  box-shadow: -1px 1px 5px rgba(0,0,0,0.4);  -webkit-transition: all 1s ease-in-out;  -moz-transition: all 1s ease-in-out;  -o-transition: all 1s ease-in-out;  -ms-transition: all 1s ease-in-out;  transition: all 1s ease-in-out;  -webkit-transform: translateX(-100%);  -moz-transform: translateX(-100%);  -o-transform: translateX(-100%);  -ms-transform: translateX(-100%);  transform: translateX(-100%);  z-index: 9;}body #appwrapper #application #sidebar-container > section * {  z-index: 2;}body #appwrapper #application #sidebar-container > section aside {  position: absolute;  right: -48px;  top: 0;  width: 47px;  height: 47px;  background: #fff;  font-size: 14pt;  line-height: 47px;  text-align: center;  border-left: solid 1px rgba(0,0,0,0.2);  -webkit-box-shadow: -1px 1px 5px rgba(0,0,0,0.2), 0 0 10px rgba(0,0,0,0.1);  box-shadow: -1px 1px 5px rgba(0,0,0,0.2), 0 0 10px rgba(0,0,0,0.1);  z-index: 999;  -webkit-transition: all 1s ease-in-out;  -moz-transition: all 1s ease-in-out;  -o-transition: all 1s ease-in-out;  -ms-transition: all 1s ease-in-out;  transition: all 1s ease-in-out;}body #appwrapper #application #sidebar-container > section nav {  position: absolute;  left: 0;  right: 0;  bottom: 0;  height: 45px;  border-top: solid 1px #ccc;  background: #fff;  -webkit-box-shadow: 0 0 15px rgba(0,0,0,0.2) inset;  box-shadow: 0 0 15px rgba(0,0,0,0.2) inset;}body #appwrapper #application #sidebar-container > section nav li {  display: inline-block;  background: #fff;  height: 45px;  margin-top: -1px;  line-height: 45px;  width: 45px;  text-align: center;  font-size: 14pt;  border-right: solid 1px rgba(0,0,0,0.2);  border-top: solid 1px #ccc;  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;  color: rgba(0,0,0,0.4);}body #appwrapper #application #sidebar-container > section nav li:hover {  color: rgba(0,0,0,0.7);}body #appwrapper #application #sidebar-container > section nav li.active {  border-top: solid 1px #fff;  color: #48f;  text-shadow: 0 1px 1px rgba(0,0,0,0.1);}body #appwrapper #application #sidebar-container > section section {  position: absolute;  bottom: 46px;  top: 0;  right: 0;  left: 0;  overflow: hidden;}body #appwrapper #application #sidebar-container > section section article {  position: absolute;  border: solid 1px rgba(0,0,0,0.2);  left: -1px;  right: -1px;  top: -1px;  bottom: -1px;  overflow: auto;  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;  -webkit-transform: translateX(-110%);  -moz-transform: translateX(-110%);  -o-transform: translateX(-110%);  -ms-transform: translateX(-110%);  transform: translateX(-110%);}body #appwrapper #application #sidebar-container > section section article h1 {  padding: 15px 0 15px 10px;  display: block;  border-bottom: solid 1px rgba(0,0,0,0.2);  font-size: 10pt;  margin: 0;}body #appwrapper #application #sidebar-container > section section article.active {  -webkit-transform: none;  -moz-transform: none;  -o-transform: none;  -ms-transform: none;  transform: none;}body #appwrapper #application #sidebar-container > section section article.active ~ article {  -webkit-transform: translateX(110%);  -moz-transform: translateX(110%);  -o-transform: translateX(110%);  -ms-transform: translateX(110%);  transform: translateX(110%);}body #appwrapper #application #sidebar-container > section section article ul {  padding: 0;  margin: 0;}body #appwrapper #application #sidebar-container > section section article li,body #appwrapper #application #sidebar-container > section section article h1,body #appwrapper #application #sidebar-container > section section article > p {  display: block;  border-bottom: solid 1px rgba(0,0,0,0.2);  font-size: 10pt;  margin: 0;}body #appwrapper #application #sidebar-container > section section article li > *,body #appwrapper #application #sidebar-container > section section article h1 > *,body #appwrapper #application #sidebar-container > section section article > p > * {  margin: 15px 0 15px 10px;}body #appwrapper #application #sidebar-container > section section article input,body #appwrapper #application #sidebar-container > section section article select,body #appwrapper #application #sidebar-container > section section article textarea {  display: block;  margin: 0;  width: 248px;  padding: 0;  height: 35px;  text-indent: 25px;  line-height: 35px;  border: none;  border-top: dotted 1px rgba(0,0,0,0.2);  outline: none;  color: #48f;}body #appwrapper #application #sidebar-container > section section article select {  -webkit-appearance: none;}body #appwrapper #application #sidebar-container > section section article img.qrcode {  width: 190px;  height: 190px;  margin: 10px 25px;  padding: 5px;  -webkit-border-radius: 100%;  border-radius: 100%;  background: #000;}body #appwrapper #application #sidebar-container > section section article label {  display: block;}body #appwrapper #application #sidebar-container > section section article #documentlistplaceholder section {  top: 49px;  bottom: 0;  padding-top: 55px;}body #appwrapper #application #sidebar-container > section section article #documentlistplaceholder section nav {  bottom: auto;  top: 0;  border-top: none;  border-bottom: solid 1px #ccc;  overflow: auto;  overflow-y: hidden;  height: 55px;}body #appwrapper #application #sidebar-container > section section article #documentlistplaceholder section nav .slider {  display: block;  width: 282px;  height: 45px;}body #appwrapper #application #sidebar-container > section section article #documentlistplaceholder section nav li {  display: inline-block;  border: none;  border-right: solid 1px #ddd;  border-bottom: solid 1px #ccc;  float: left;  height: 45px;  width: 45px;  line-height: 45px;  padding: 0;  margin: 0 0 -1px 0;  -webkit-transition-duration: 0.25s;  -moz-transition-duration: 0.25s;  -o-transition-duration: 0.25s;  -ms-transition-duration: 0.25s;  transition-duration: 0.25s;}body #appwrapper #application #sidebar-container > section section article #documentlistplaceholder section nav li:hover {  border-bottom-color: #fff;}body #appwrapper #application #sidebar-container > section section article #documentlistplaceholder section nav li > * {  margin: 0;}body #appwrapper #application #sidebar-container > section section article #documentlistplaceholder section article {  position: relative;  -webkit-transform: none;  -moz-transform: none;  -o-transform: none;  -ms-transform: none;  transform: none;}body #appwrapper #application #sidebar-container > section.open {  -webkit-transform: none;  -moz-transform: none;  -o-transform: none;  -ms-transform: none;  transform: none;}body #appwrapper #application #sidebar-container > section.open aside {  right: 0;  -webkit-box-shadow: -2px 0 5px rgba(0,0,0,0.2);  box-shadow: -2px 0 5px rgba(0,0,0,0.2);}@media (max-width:320px) {  body #appwrapper #application #sidebar-container > section {    height: 100%;    max-height: 100%;  }}body #loadingscreen {  position: absolute;  left: 0;  right: 0;  top: 0;  bottom: 0;  opacity: 0;  filter: alpha(opacity=0);  -ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=0)';  z-index: -1;  -webkit-transition: all 1s ease-in-out;  -moz-transition: all 1s ease-in-out;  -o-transition: all 1s ease-in-out;  -ms-transition: all 1s ease-in-out;  transition: all 1s ease-in-out;  overflow: hidden;}body #loadingscreen * {  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;}body #loadingscreen > section {  width: 100%;  height: 100%;  background: #000;  opacity: 0.8;  filter: alpha(opacity=80);  -ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=80)';  trnasition: all 1s ease-in-out;}body #loadingscreen > aside {  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;  position: absolute;  left: -200%;  right: 200%;  top: 0;  bottom: 0;  background: #fff;  -webkit-box-shadow: 0 0 5px rgba(0,0,0,0.2);  box-shadow: 0 0 5px rgba(0,0,0,0.2);}body #loadingscreen > aside:last-of-type {  border: solid 1px rgba(0,0,0,0.05);  left: 200%;  right: -200%;}body #loadingscreen.active > aside {  left: 0;  right: 0;}body #loadingscreen > article {  height: 200px;  width: 350px;  background: #fff;  -webkit-border-radius: 4px;  border-radius: 4px;  -webkit-box-shadow: 0 5px 5px rgba(0,0,0,0.2);  box-shadow: 0 5px 5px rgba(0,0,0,0.2);  border: solid 1px rgba(0,0,0,0.2);  opacity: 0;  filter: alpha(opacity=0);  -ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=0)';  position: absolute;  z-index: 9;  left: 50%;  top: 50%;  margin: -100px 0 0 -175px;  text-align: center;  -webkit-transform: scale(10);  -moz-transform: scale(10);  -o-transform: scale(10);  -ms-transform: scale(10);  transform: scale(10);  font-family: Roboto;  font-size: 18pt;  font-weight: 100;  text-align: center;  line-height: 200px;  vertical-align: middle;}body #loadingscreen > article > span,body #loadingscreen > article p,body #loadingscreen > article div {  display: inline-block;  vertical-align: middle;}body #loadingscreen > article > span {  width: 30px;  height: 30px;  -webkit-border-radius: 100%;  border-radius: 100%;  border: solid 1px rgba(0,0,0,0.3);  margin-top: -6px;}body #loadingscreen > article div {  width: 0;  overflow: hidden;}body #loadingscreen > article div p {  float: left;}body #loadingscreen > article div:last-of-type p {  float: right;}body #loadingscreen > article > p {  line-height: 1em;  position: absolute;  left: 10%;  right: 10%;  top: 65%;  height: 50px;  font-size: 14pt;  overflow: hidden;}body #loadingscreen > article:hover > span {  border-color: rgba(0,0,0,0.8);}body #loadingscreen > article:hover div {  width: 80px;  margin: 0;  padding: 0;  margin-left: 11px;}body #loadingscreen > article:hover div:last-of-type {  width: 11px;  margin: 0;  margin-right: 80px;}body #loadingscreen.active > article {  opacity: 1;  -ms-filter: none;  filter: none;  -webkit-transform: scale(1);  -moz-transform: scale(1);  -o-transform: scale(1);  -ms-transform: scale(1);  transform: scale(1);}body #loadingscreen.active {  z-index: 99;  opacity: 1;  -ms-filter: none;  filter: none;}body section#application #documentplaceholder > section > section > aside {  display: block;  width: 100%;  height: 100px;  border: solid 1px rgba(0,0,0,0.2);  -webkit-box-shadow: 0 0 25px rgba(0,0,0,0.2) inset;  box-shadow: 0 0 25px rgba(0,0,0,0.2) inset;  text-align: center;  position: relative;  line-height: 100px;  overflow: hidden;}body section#application #documentplaceholder > section > section > aside i {  font-size: 100px;  color: rgba(0,0,0,0.2);  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;}body section#application #documentplaceholder > section > section > aside:hover i {  color: rgba(0,0,0,0.4);}body section#application #documentplaceholder > section > section > article {  display: block;  margin: 0 -1px;  padding: 0;  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;  border-left: solid 1px rgba(0,0,0,0.2);  border-right: solid 1px rgba(0,0,0,0.2);  border-bottom: solid 1px #ccc;  background: -webkit-gradient(linear, left top, left bottom, color-stop(0, rgba(0,0,0,0.1)), color-stop(1, rgba(0,0,0,0.2)));  background: -webkit-linear-gradient(top, rgba(0,0,0,0.1) 0, rgba(0,0,0,0.2) 100%);  background: -moz-linear-gradient(top, rgba(0,0,0,0.1) 0, rgba(0,0,0,0.2) 100%);  background: -o-linear-gradient(top, rgba(0,0,0,0.1) 0, rgba(0,0,0,0.2) 100%);  background: -ms-linear-gradient(top, rgba(0,0,0,0.1) 0, rgba(0,0,0,0.2) 100%);  background: linear-gradient(top, rgba(0,0,0,0.1) 0, rgba(0,0,0,0.2) 100%);}body section#application #documentplaceholder > section > section > article * {  -webkit-transition: all 0.25s ease-in-out;  -moz-transition: all 0.25s ease-in-out;  -o-transition: all 0.25s ease-in-out;  -ms-transition: all 0.25s ease-in-out;  transition: all 0.25s ease-in-out;}body section#application #documentplaceholder > section > section > article.inactive {  -webkit-transform: translateX(100%);  -moz-transform: translateX(100%);  -o-transform: translateX(100%);  -ms-transform: translateX(100%);  transform: translateX(100%);  border: none;}body section#application #documentplaceholder > section > section > article.inactive aside {  height: 0;}body section#application #documentplaceholder > section > section > article aside {  height: 45px;  width: 100%;  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;  position: relative;}body section#application #documentplaceholder > section > section > article aside > * {  display: block;}body section#application #documentplaceholder > section > section > article aside#secondary {  overflow: 0;  height: 150px;  margin-left: 73px;  background: -webkit-gradient(linear, left top, right top, color-stop(0, rgba(255,255,255,0.8)), color-stop(1, rgba(255,255,255,0.4)));  background: -webkit-linear-gradient(left, rgba(255,255,255,0.8) 0, rgba(255,255,255,0.4) 100%);  background: -moz-linear-gradient(left, rgba(255,255,255,0.8) 0, rgba(255,255,255,0.4) 100%);  background: -o-linear-gradient(left, rgba(255,255,255,0.8) 0, rgba(255,255,255,0.4) 100%);  background: -ms-linear-gradient(left, rgba(255,255,255,0.8) 0, rgba(255,255,255,0.4) 100%);  background: linear-gradient(left, rgba(255,255,255,0.8) 0, rgba(255,255,255,0.4) 100%);}body section#application #documentplaceholder > section > section > article aside#secondary.inactive {  height: 0;  margin: 0;  opacity: 0;  filter: alpha(opacity=0);  -ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=0)';  z-index: -1;  padding: 0;}body section#application #documentplaceholder > section > section > article aside#secondary label {  display: block;  position: relative;}body section#application #documentplaceholder > section > section > article aside#secondary label span {  left: 0;}body section#application #documentplaceholder > section > section > article aside#secondary label div {  right: 0;  left: 0;}body section#application #documentplaceholder > section > section > article aside#secondary label div input {  border: solid 1px #ccc;}body section#application #documentplaceholder > section > section > article aside#secondary label:last-child {  height: 106px;}body section#application #documentplaceholder > section > section > article aside#secondary label:last-child div {  left: 0;  right: 0;  top: 0;  bottom: 0;  padding: 25px;  border: solid 1px #ccc;  border-bottom: none;  background: #fff;}body section#application #documentplaceholder > section > section > article aside#secondary label:last-child div textarea {  height: 100%;  width: 100%;  margin: 0;  border: none;}body section#application #documentplaceholder > section > section > article aside nav {  position: absolute;  top: 0;  bottom: 0;  left: 0;}body section#application #documentplaceholder > section > section > article aside nav#primary {  left: auto;  right: 0;}body section#application #documentplaceholder > section > section > article aside nav > * {  float: left;  list-style: none;  width: 35px;  height: 45px;  line-height: 45px;  text-align: center;  border-right: solid 1px rgba(0,0,0,0.2);  background: rgba(255,255,255,0.8);  background: -webkit-gradient(linear, left top, right top, color-stop(0, rgba(255,255,255,0.8)), color-stop(1, rgba(255,255,255,0.4)));  background: -webkit-linear-gradient(left, rgba(255,255,255,0.8) 0, rgba(255,255,255,0.4) 100%);  background: -moz-linear-gradient(left, rgba(255,255,255,0.8) 0, rgba(255,255,255,0.4) 100%);  background: -o-linear-gradient(left, rgba(255,255,255,0.8) 0, rgba(255,255,255,0.4) 100%);  background: -ms-linear-gradient(left, rgba(255,255,255,0.8) 0, rgba(255,255,255,0.4) 100%);  background: linear-gradient(left, rgba(255,255,255,0.8) 0, rgba(255,255,255,0.4) 100%);}body section#application #documentplaceholder > section > section > article aside nav > * > label {  display: block;  width: 100%;  height: 100%;}body section#application #documentplaceholder > section > section > article aside nav > *:first-child {  border-left: solid 1px rgba(0,0,0,0.2);}body section#application #documentplaceholder > section > section > article aside nav > *.inactive {  color: transparent;}body section#application #documentplaceholder > section > section > article aside nav input {  display: none;}body section#application #documentplaceholder > section > section > article aside input {  height: 45px;  width: 100%;  margin: 0;  border: none;  text-indent: 25px;  outline: none;  padding: 0;  -webkit-border-radius: 0;  border-radius: 0;}body section#application #documentplaceholder > section > section > article aside input[type='checkbox'] {  z-index: -1;  opacity: 0;  filter: alpha(opacity=0);  -ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=0)';  -webkit-transform: translateX(-1000%);  -moz-transform: translateX(-1000%);  -o-transform: translateX(-1000%);  -ms-transform: translateX(-1000%);  transform: translateX(-1000%);}body section#application #documentplaceholder > section > section > article aside label {  height: 45px;}body section#application #documentplaceholder > section > section > article aside label span {  position: absolute;  height: 25px;  width: auto;  padding: 0 10px;  line-height: 25px;  bottom: 0;  left: 73px;  opacity: 0;  filter: alpha(opacity=0);  -ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=0)';  z-index: -1;  background: #ccc;  color: #000;  text-shadow: 0 1px 1px #fff;  -webkit-box-shadow: 0 0 2px rgba(0,0,0,0.5);  box-shadow: 0 0 2px rgba(0,0,0,0.5);}body section#application #documentplaceholder > section > section > article aside label div {  position: absolute;  left: 73px;  right: 109px;}body section#application #documentplaceholder > section > section > article aside label:hover span {  -webkit-transform: translateY(25px);  -moz-transform: translateY(25px);  -o-transform: translateY(25px);  -ms-transform: translateY(25px);  transform: translateY(25px);  opacity: 1;  -ms-filter: none;  filter: none;  z-index: 1;}body section#application #documentplaceholder > section > section > article aside label:hover input {  z-index: 2;}body section#application #documentplaceholder > section > section > article .modal.button {  display: none;}body section#application #documentplaceholder > section > section {  overflow-y: auto;  overflow-x: hidden;}@media (max-width:320px) {  body section#application #documentplaceholder > section > section nav > * {    width: 25px !important;    height: 35px !important;    line-height: 35px !important;  }  body section#application #documentplaceholder > section > section .button.add,  body section#application #documentplaceholder > section > section .button.remove,  body section#application #documentplaceholder > section > section .button.showhide {    display: none;  }  body section#application #documentplaceholder > section > section .button.modal {    display: block !important;    border-left: solid 1px #ccc;  }  body section#application #documentplaceholder > section > section input,  body section#application #documentplaceholder > section > section label,  body section#application #documentplaceholder > section > section aside#primary {    height: 35px !important;  }  body section#application #documentplaceholder > section > section aside#primary div {    right: 26px;    left: 52px;  }  body section#application #documentplaceholder > section > section article.inactive aside#primary {    height: 0 !important;  }}body section#application #documentplaceholder > section {  position: absolute;  left: 0;  right: 0;  top: 0;  bottom: 0;  -webkit-perspective: 200px;  -moz-perspective: 200px;  -ms-perspective: 200px;  perspective: 200px;  background: -moz-radial-gradient(center, ellipse cover, rgba(0,0,0,0) 0%, rgba(0,0,0,0.4) 100%);  background: -webkit-gradient(radial, center center, 0px, center center, 100%, color-stop(0%, rgba(0,0,0,0)), color-stop(100%, rgba(0,0,0,0.4)));  background: -webkit-radial-gradient(center, ellipse cover, rgba(0,0,0,0) 0%, rgba(0,0,0,0.4) 100%);  background: -o-radial-gradient(center, ellipse cover, rgba(0,0,0,0) 0%, rgba(0,0,0,0.4) 100%);  background: -ms-radial-gradient(center, ellipse cover, rgba(0,0,0,0) 0%, rgba(0,0,0,0.4) 100%);  background: radial-gradient(ellipse at center, rgba(0,0,0,0) 0%, rgba(0,0,0,0.4) 100%);}body section#application #documentplaceholder > section header {  position: absolute;  left: 0;  right: 0;  top: 0;  bottom: 0;  height: 45px;  line-height: 45px;  font-size: 14pt;  font-weight: 100;  bottom: auto;  padding-left: 65px;  background: #fff;  border-bottom: solid 1px #ccc;  -webkit-box-shadow: 0 0 5px rgba(0,0,0,0.2);  box-shadow: 0 0 5px rgba(0,0,0,0.2);  z-index: 3;  overflow: hidden;  -webkit-transition: all 0.75s ease-in-out;  -moz-transition: all 0.75s ease-in-out;  -o-transition: all 0.75s ease-in-out;  -ms-transition: all 0.75s ease-in-out;  transition: all 0.75s ease-in-out;  -webkit-transition-delay: 0.25s;  -moz-transition-delay: 0.25s;  -o-transition-delay: 0.25s;  -ms-transition-delay: 0.25s;  transition-delay: 0.25s;}body section#application #documentplaceholder > section header nav {  position: absolute;  left: 0;  right: 0;  top: 0;  bottom: 0;  height: 45px;  line-height: 45px;  font-size: 14pt;  font-weight: 100;  left: auto;}body section#application #documentplaceholder > section header nav li {  float: right;  list-style: none;  padding: 0 15px;  display: inline-block;  color: rgba(0,0,0,0.4);  text-shadow: 0 1px 1px #fff;  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;}body section#application #documentplaceholder > section header nav li:hover {  color: rgba(0,0,0,0.8);}body section#application #documentplaceholder > section header nav li.active {  color: #000;}body section#application #documentplaceholder > section > section {  position: absolute;  left: 0;  right: 0;  top: 0;  bottom: 0;  top: 45px;  -webkit-backface-visibility: hidden;  -moz-backface-visibility: hidden;  -ms-backface-visibility: hidden;  backface-visibility: hidden;  background: #fff;  z-index: 1;  -webkit-transition: all 1s ease-in-out;  -moz-transition: all 1s ease-in-out;  -o-transition: all 1s ease-in-out;  -ms-transition: all 1s ease-in-out;  transition: all 1s ease-in-out;  -webkit-transform: rotateY(-90deg) translateX(-100%);  -moz-transform: rotateY(-90deg) translateX(-100%);  -o-transform: rotateY(-90deg) translateX(-100%);  -ms-transform: rotateY(-90deg) translateX(-100%);  transform: rotateY(-90deg) translateX(-100%);  left: -100%;  right: 100%;  -webkit-box-shadow: 0 0 15px rgba(0,0,0,0.8);  box-shadow: 0 0 15px rgba(0,0,0,0.8);  background: #fff;}body section#application #documentplaceholder > section > section.active {  left: 0 !important;  right: 0 !important;  -webkit-transform: none !important;  -moz-transform: none !important;  -o-transform: none !important;  -ms-transform: none !important;  transform: none !important;  z-index: 2 !important;}body section#application #documentplaceholder > section > section:last-child {  -webkit-transform: rotateY(90deg) translateX(100%);  -moz-transform: rotateY(90deg) translateX(100%);  -o-transform: rotateY(90deg) translateX(100%);  -ms-transform: rotateY(90deg) translateX(100%);  transform: rotateY(90deg) translateX(100%);  right: -100%;  left: 100%;}body section#application #documentplaceholder > section.sidebaropen header {  padding-left: 265px;  -webkit-transition-duration: 0.5s;  -moz-transition-duration: 0.5s;  -o-transition-duration: 0.5s;  -ms-transition-duration: 0.5s;  transition-duration: 0.5s;  -webkit-transition-delay: 0;  -moz-transition-delay: 0;  -o-transition-delay: 0;  -ms-transition-delay: 0;  transition-delay: 0;}";
+		element.innerHTML = "body,html {  overflow: hidden;  width: 100%;  height: 100%;  margin: 0;  padding: 0;}body {  width: 100%;  height: 100%;  font-size: 10pt;  font-family: Roboto, sans-serif;  color: #242424;  background: #100;}@font-face {  font-family: 'Open Sans';  font-style: normal;  font-weight: 300;  src: local('Open Sans Light'), local('OpenSans-Light'), url('<<INSERT OPEN SANS 300 WOFF HERE>>') format('woff');}@font-face {  font-family: 'Open Sans';  font-style: normal;  font-weight: 400;  src: local('Open Sans'), local('OpenSans'), url('<<INSERT OPEN SANS 400 WOFF HERE>>') format('woff');}@font-face {  font-family: 'Electrolize';  font-style: normal;  font-weight: 400;  src: local('Electrolize'), local('Electrolize-Regular'), url('<<INSERT ELECTROLIZE WOFF HERE>>') format('woff');}@font-face {  font-family: 'Roboto';  font-style: normal;  font-weight: 100;  src: local('Roboto Thin'), local('Roboto-Thin'), url('<<INSERT ROBOTO 100 WOFF HERE>>') format('woff');}@font-face {  font-family: 'Roboto';  font-style: normal;  font-weight: 400;  src: local('Roboto Regular'), local('Roboto-Regular'), url('<<INSERT ROBOTO 400 WOFF HERE>>') format('woff');}body #appwrapper > section {  position: absolute;  font-weight: 100;  z-index: 1;  left: 0;  top: 0;  bottom: 0;  right: 0;  -webkit-perspective: 1600px;  -moz-perspective: 1600px;  -ms-perspective: 1600px;  perspective: 1600px;  -webkit-transition: all 1s ease-in-out;  -moz-transition: all 1s ease-in-out;  -o-transition: all 1s ease-in-out;  -ms-transition: all 1s ease-in-out;  transition: all 1s ease-in-out;  font-family: Roboto;  overflow: hidden;}body #appwrapper > section#help {  background: rgba(0,0,0,0.9);  z-index: 3;  -webkit-transform: translateY(-100%);  -moz-transform: translateY(-100%);  -o-transform: translateY(-100%);  -ms-transform: translateY(-100%);  transform: translateY(-100%);}body #appwrapper > section#help .dragger {  background: rgba(0,0,0,0.8);  border-color: #000;  color: #fff;  bottom: 0;  left: 25px;  border-bottom-right-radius: 0;  border-bottom-left-radius: 0;  border-bottom: none;}body #appwrapper > section#help .wrapper {  display: table;  width: 100%;  height: 100%;  text-align: center;}body #appwrapper > section#help .wrapper aside {  position: absolute;  top: 0;  bottom: 0;  width: 15%;  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;  background: rgba(255,255,255,0.1);}body #appwrapper > section#help .wrapper aside.right {  right: 0;}body #appwrapper > section#help .wrapper aside.left {  left: 0;}body #appwrapper > section#help .wrapper aside:hover {  background: rgba(255,255,255,0.2);}body #appwrapper > section#help .wrapper nav {  position: absolute;  top: 70%;  width: 500px;  left: 50%;  margin-left: -250px;  text-align: center;}body #appwrapper > section#help .wrapper nav li {  display: inline-block;  width: 0;  height: 0;  border: solid 5px rgba(255,255,255,0.4);  -webkit-border-radius: 100%;  border-radius: 100%;  margin: 10px;  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;}body #appwrapper > section#help .wrapper nav li:hover {  border-color: rgba(255,255,255,0.6);}body #appwrapper > section#help .wrapper nav li.active {  border-color: #fff;}body #appwrapper > section#help .wrapper section {  position: absolute;  height: 40%;  top: 20%;  left: 50%;  margin-left: -250px;  width: 500px;  -webkit-box-shadow: 0 0 50px rgba(0,0,0,0.1);  box-shadow: 0 0 50px rgba(0,0,0,0.1);  overflow: hidden;  -webkit-border-radius: 4px;  border-radius: 4px;  -webkit-perspective: 200px;  -moz-perspective: 200px;  -ms-perspective: 200px;  perspective: 200px;}body #appwrapper > section#help .wrapper section article {  position: absolute;  left: 0;  right: 0;  top: 0;  bottom: 0;  padding: 25px;  color: #fff;  text-shadow: 0 1px 1px #000;  -webkit-transform: translateX(-200%) rotateY(90deg);  -moz-transform: translateX(-200%) rotateY(90deg);  -o-transform: translateX(-200%) rotateY(90deg);  -ms-transform: translateX(-200%) rotateY(90deg);  transform: translateX(-200%) rotateY(90deg);  -webkit-transition: all 1s ease-in-out;  -moz-transition: all 1s ease-in-out;  -o-transition: all 1s ease-in-out;  -ms-transition: all 1s ease-in-out;  transition: all 1s ease-in-out;  text-align: left;  text-indent: 25px;  -webkit-box-shadow: 0 0 50px rgba(100,100,100,0.1) inset;  box-shadow: 0 0 50px rgba(100,100,100,0.1) inset;}body #appwrapper > section#help .wrapper section article.active {  -webkit-transform: translateX(0) rotateY(0);  -moz-transform: translateX(0) rotateY(0);  -o-transform: translateX(0) rotateY(0);  -ms-transform: translateX(0) rotateY(0);  transform: translateX(0) rotateY(0);  background: rgba(100,100,100,0.1);}body #appwrapper > section#help .wrapper section article.active ~ article {  -webkit-transform: translateX(200%) rotateY(-90deg);  -moz-transform: translateX(200%) rotateY(-90deg);  -o-transform: translateX(200%) rotateY(-90deg);  -ms-transform: translateX(200%) rotateY(-90deg);  transform: translateX(200%) rotateY(-90deg);}body #appwrapper > section#help .wrapper section article .key {  display: inline-block;  background: #fff;  border: solid 2px #aaa;  border-top: none;  border-bottom-width: 3px;  -webkit-border-radius: 4px;  border-radius: 4px;  color: #444;  text-shadow: none;  font-weight: normal;  text-indent: 0;  padding: 2px 4px;}body #appwrapper > section#landing {  background: #fff;  overflow: auto;  -webkit-transform: scale(0.8) translateX(-150%);  -moz-transform: scale(0.8) translateX(-150%);  -o-transform: scale(0.8) translateX(-150%);  -ms-transform: scale(0.8) translateX(-150%);  transform: scale(0.8) translateX(-150%);}body #appwrapper > section#landing section {  height: 600px;  position: relative;  color: #444;  overflow: hidden;}body #appwrapper > section#landing section h1 {  display: block;  margin: 10px 0 0;  padding: 0;  font-size: 24pt;}body #appwrapper > section#landing section:nth-child(2n + 1) {  background: #222;  color: #d62b00;}body #appwrapper > section#landing section:nth-child(2n) > * {  color: #08d;}body #appwrapper > section#landing section:first-child {  height: 300px;}body #appwrapper > section#landing section#raspmenu {  height: 390px;}body #appwrapper > section#landing section > .container {  margin: 0 auto;  width: 1000px;}body #appwrapper > section#landing header {  background: #d62b00;  text-align: center;  height: 100%;  color: #000;}body #appwrapper > section#landing header img,body #appwrapper > section#landing header h1 {  line-height: 300px;  display: inline;  margin: 0;  padding: 0;  font-size: 72pt;  color: #fff;  text-shadow: 0 1px 1px #000;  vertical-align: middle;  padding: 10px;  font-family: Roboto;}body #appwrapper > section#landing nav {  color: #000;  background: #fff;  text-align: center;  position: absolute;  left: 50%;  top: 50px;  margin: 0 -180px;  width: 320px;  height: 250px;  background: #d62b00;  border: solid 10px #ffb5a3;  border-top-left-radius: 450px;  border-top-right-radius: 450px;  border-bottom-left-radius: 550px 800px;  border-bottom-right-radius: 550px 800px;  padding: 20px;  -webkit-transition: border-color 0.5s ease-in-out;  -moz-transition: border-color 0.5s ease-in-out;  -o-transition: border-color 0.5s ease-in-out;  -ms-transition: border-color 0.5s ease-in-out;  transition: border-color 0.5s ease-in-out;}body #appwrapper > section#landing nav h1 {  font-size: 42pt;  color: rgba(255,255,255,0.4);  text-transform: uppercase;  padding: 50px;  margin: 0;  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;}body #appwrapper > section#landing nav:hover {  border-color: #ffded6;}body #appwrapper > section#landing nav:hover h1 {  text-shadow: 0 1px 1px #000;  color: #fff;}body #appwrapper > section#landing aside {  position: absolute;  top: 50px;  left: 50px;  right: 50px;  bottom: 50px;  color: #000;}body #appwrapper > section#landing aside:first-of-type {  right: 50%;  padding-right: 230px;}body #appwrapper > section#landing aside:last-of-type {  left: 50%;  padding-left: 230px;}body #appwrapper > section#landing aside .container {  overflow: hidden;  background: #08d;  border: solid 10px #c4e8ff;  position: relative;  padding: 0;  margin: 0;  height: 100%;  -webkit-box-shadow: 0 0 10px rgba(0,0,0,0.3) inset;  box-shadow: 0 0 10px rgba(0,0,0,0.3) inset;}body #appwrapper > section#landing aside .container > * {  padding: 5px 15px;  margin: 0;}body #appwrapper > section#landing aside .container h1 {  color: #fff;  background: #0069aa;  height: 45px;  line-height: 45px;  text-shadow: 0 1px 1px #000;}body #appwrapper > section#landing aside .container .content {  padding-bottom: 20px;  position: absolute;  left: 0;  right: 0;  bottom: 0;  top: 55px;  padding-top: 5px;  padding: 5px 0;  background: rgba(255,255,255,0.4);}body #appwrapper > section#landing aside .container .content input,body #appwrapper > section#landing aside .container .content button {  width: 100%;  padding: 15px 0;  margin: 10px 0 0 0;  line-height: 15px;  height: 15px;  background: #fff;  border: none;  border-bottom: solid 1px #ccc;  background: rgba(255,255,255,0.8);  text-indent: 5px;  outline: none;  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;}body #appwrapper > section#landing aside .container .content input:hover,body #appwrapper > section#landing aside .container .content button:hover {  background: #fff;}body #appwrapper > section#landing aside .container .content button {  position: absolute;  bottom: 0;  left: 0;  right: 0;  height: 25px;  padding: 15px 0 30px 0;  text-indent: 0;}body #appwrapper > section#application {  background: #444;  z-index: 2;  -webkit-transform: translateX(150%) scale(0.8);  -moz-transform: translateX(150%) scale(0.8);  -o-transform: translateX(150%) scale(0.8);  -ms-transform: translateX(150%) scale(0.8);  transform: translateX(150%) scale(0.8);}body #appwrapper > section#application aside,body #appwrapper > section#application section {  position: absolute;  top: 0;  bottom: 0;  left: 0;  right: 0;}body #appwrapper > section#application aside {  left: 0;  right: auto;  width: 300px;  background: #222;  color: #fff;  -webkit-transform: translateX(-150px) scale(0.8);  -moz-transform: translateX(-150px) scale(0.8);  -o-transform: translateX(-150px) scale(0.8);  -ms-transform: translateX(-150px) scale(0.8);  transform: translateX(-150px) scale(0.8);  -webkit-transition: all 1s ease-in-out;  -moz-transition: all 1s ease-in-out;  -o-transition: all 1s ease-in-out;  -ms-transition: all 1s ease-in-out;  transition: all 1s ease-in-out;}body #appwrapper > section#application aside.active {  -webkit-transform: none;  -moz-transform: none;  -o-transform: none;  -ms-transform: none;  transform: none;}body #appwrapper > section#application aside h1 {  height: 40px;  line-height: 30px;  font-size: 24pt;  border-bottom: solid 2px #999;  margin-bottom: 75px;  text-indent: 25px;}body #appwrapper > section#application aside > li {  display: block;  padding: 15px 15px;  font-size: 14pt;  border-bottom: solid 1px #444;  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;  color: #d62b00;}body #appwrapper > section#application aside > li i {  margin-right: 15px;}body #appwrapper > section#application aside > li:first-of-type {  border-top: solid 1px #444;}body #appwrapper > section#application aside > li:hover {  background: rgba(255,255,255,0.1);}body #appwrapper > section#application aside > li.active {  color: #08d;  background: rgba(255,255,255,0.8);}body #appwrapper > section#application aside > li.active:hover {  background: #fff;}body #appwrapper > section#application section {  background: #fff;  -webkit-transform: translateX(300px) scale(1.2);  -moz-transform: translateX(300px) scale(1.2);  -o-transform: translateX(300px) scale(1.2);  -ms-transform: translateX(300px) scale(1.2);  transform: translateX(300px) scale(1.2);  -webkit-transform-origin: left center;  -moz-transform-origin: left center;  -o-transform-origin: left center;  -ms-transform-origin: left center;  transform-origin: left center;  overflow: hidden;  -webkit-box-shadow: 0 0 15px #000;  box-shadow: 0 0 15px #000;  -webkit-transition: all 1s ease-in-out;  -moz-transition: all 1s ease-in-out;  -o-transition: all 1s ease-in-out;  -ms-transition: all 1s ease-in-out;  transition: all 1s ease-in-out;  background: #222;}body #appwrapper > section#application section.active {  -webkit-transform: none;  -moz-transform: none;  -o-transform: none;  -ms-transform: none;  transform: none;}body #appwrapper > section#application section > article {  position: absolute;  top: 0;  bottom: 0;  left: 0;  right: 0;  -webkit-transition: all 1s ease-in-out;  -moz-transition: all 1s ease-in-out;  -o-transition: all 1s ease-in-out;  -ms-transition: all 1s ease-in-out;  transition: all 1s ease-in-out;  -webkit-transform: translateX(-110%);  -moz-transform: translateX(-110%);  -o-transform: translateX(-110%);  -ms-transform: translateX(-110%);  transform: translateX(-110%);  padding: 25px;  background: #fff;  overflow: auto;}body #appwrapper > section#application section > article.active {  -webkit-transform: none;  -moz-transform: none;  -o-transform: none;  -ms-transform: none;  transform: none;}body #appwrapper > section#application section > article.active ~ article {  -webkit-transform: translateX(110%);  -moz-transform: translateX(110%);  -o-transform: translateX(110%);  -ms-transform: translateX(110%);  transform: translateX(110%);}body #appwrapper > section#application section > article h1 {  margin: -25px -25px 0;  padding: 15px;  font-size: 20pt;  color: #d62b00;  border-bottom: solid 1px #d62b00;  -webkit-box-shadow: 0 0 5px rgba(0,0,0,0.2);  box-shadow: 0 0 5px rgba(0,0,0,0.2);  background: #222;  font-weight: 100;}body #appwrapper > section#application section > article .form {  display: block;  margin: 50px 0 0 0;  padding: 25px;  border: solid 5px #ddf2ff;  padding-bottom: 75px;  position: relative;}body #appwrapper > section#application section > article .form hr {  border: none;  border-top: solid 1px #ddf2ff;  margin: 25px -25px;  clear: both;}body #appwrapper > section#application section > article .form br {  clear: both;}body #appwrapper > section#application section > article .form label {  display: block;  overflow: hidden;  clear: both;  background: transparent;}body #appwrapper > section#application section > article .form label span,body #appwrapper > section#application section > article .form label input {  display: inline-block;  float: left;  padding: 7px 0;  margin: 0 0 20px;}body #appwrapper > section#application section > article .form label span:last-of-type,body #appwrapper > section#application section > article .form label input:last-of-type {  margin: 0;}body #appwrapper > section#application section > article .form label span {  width: 30%;}body #appwrapper > section#application section > article .form label input {  width: 65%;}body #appwrapper > section#application section > article .form button {  display: block;  background: #77cbff;  border: none;  position: absolute;  bottom: -5px;  left: -5px;  right: -5px;  height: 50px;  line-height: 50px;  color: rgba(255,255,255,0.7);  margin: 0;  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;}body #appwrapper > section#application section > article .form button:hover {  background: #08d;  color: #fff;}body #appwrapper > section#application section > article #recipies-container nav {  position: absolute;  top: 0;  right: 0;  height: 25px;}body #appwrapper > section#application section > article #recipies-container nav li {  list-style: none;  float: right;  display: inline-block;  height: 25px;  width: 25px;  text-align: center;  line-height: 25px;  font-size: 12pt;  margin: 5px 10px;}body #appwrapper > section#application section > article #recipies-container nav.add {  display: block;  position: relative;}body #appwrapper > section#application section > article #recipies-container nav.add li {  width: 100%;}body #appwrapper > section#application section > article #recipies-container > input {  width: 100%;  padding: 20px 25px;  margin-top: 20px;  background: #08d;  color: #fff;  border: none;  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;  outline: none;  font-size: 18pt;}body #appwrapper > section#application section > article #recipies-container > input::-webkit-input-placeholder {  color: rgba(255,255,255,0.5);}body #appwrapper > section#application section > article #recipies-container > input:-moz-placeholder {  color: rgba(255,255,255,0.5);}body #appwrapper > section#application section > article #recipies-container > input::-moz-placeholder {  color: rgba(255,255,255,0.5);}body #appwrapper > section#application section > article #recipies-container > input:-ms-input-placeholder {  color: rgba(255,255,255,0.5);}body #appwrapper > section#application section > article #recipies-container > input:hover,body #appwrapper > section#application section > article #recipies-container > input:active,body #appwrapper > section#application section > article #recipies-container > input:focus {  background: #d62b00;  color: #000;}body #appwrapper > section#application section > article #recipies-container > input:hover::-webkit-input-placeholder,body #appwrapper > section#application section > article #recipies-container > input:active::-webkit-input-placeholder,body #appwrapper > section#application section > article #recipies-container > input:focus::-webkit-input-placeholder {  color: rgba(0,0,0,0.5);}body #appwrapper > section#application section > article #recipies-container > input:hover:-moz-placeholder,body #appwrapper > section#application section > article #recipies-container > input:active:-moz-placeholder,body #appwrapper > section#application section > article #recipies-container > input:focus:-moz-placeholder {  color: rgba(0,0,0,0.5);}body #appwrapper > section#application section > article #recipies-container > input:hover::-moz-placeholder,body #appwrapper > section#application section > article #recipies-container > input:active::-moz-placeholder,body #appwrapper > section#application section > article #recipies-container > input:focus::-moz-placeholder {  color: rgba(0,0,0,0.5);}body #appwrapper > section#application section > article #recipies-container > input:hover:-ms-input-placeholder,body #appwrapper > section#application section > article #recipies-container > input:active:-ms-input-placeholder,body #appwrapper > section#application section > article #recipies-container > input:focus:-ms-input-placeholder {  color: rgba(0,0,0,0.5);}body #appwrapper > section#application section > article #recipies-container article,body #appwrapper > section#application section > article #recipies-container label,body #appwrapper > section#application section > article #recipies-container div,body #appwrapper > section#application section > article #recipies-container li {  display: block;  position: relative;}body #appwrapper > section#application section > article #recipies-container .active {  display: block;}body #appwrapper > section#application section > article #recipies-container .inactive {  display: none;}body #appwrapper > section#application section > article #recipies-container article article {  padding-left: 25px;}body #appwrapper > section#application section > article #recipies-container article {  background: #fff;  border: solid 5px #ddf2ff;  padding: 5px 10px;  margin: 10px 0;}body #appwrapper > section#application section > article #recipies-container article article {  background: #aadeff;}body #appwrapper.landing section#landing,body #appwrapper.help section#help,body #appwrapper.application section#application,body #appwrapper.settings section#settings {  -webkit-transform: none;  -moz-transform: none;  -o-transform: none;  -ms-transform: none;  transform: none;}body #appwrapper.help section#help ~ section#application,body #appwrapper.settings section#settings ~ section#application {  -webkit-transform: none;  -moz-transform: none;  -o-transform: none;  -ms-transform: none;  transform: none;}body #appwrapper {  position: relative;  width: 100%;  height: 100%;  -webkit-perspective: 1600px;  -moz-perspective: 1600px;  -ms-perspective: 1600px;  perspective: 1600px;  -webkit-perspective-origin: bottom center;  -moz-perspective-origin: bottom center;  -ms-perspective-origin: bottom center;  perspective-origin: bottom center;  -webkit-transition: all 1s ease-in-out;  -moz-transition: all 1s ease-in-out;  -o-transition: all 1s ease-in-out;  -ms-transition: all 1s ease-in-out;  transition: all 1s ease-in-out;  font-family: Roboto;  font-weight: 100;  overflow: hidden;}body #modal-window {  position: absolute;  left: 0;  right: 0;  top: 0;  bottom: 0;  -webkit-transition: all 1s ease-in-out;  -moz-transition: all 1s ease-in-out;  -o-transition: all 1s ease-in-out;  -ms-transition: all 1s ease-in-out;  transition: all 1s ease-in-out;  background: rgba(0,0,0,0);  z-index: -1;}body #modal-window section {  position: absolute;  left: 50%;  top: 50%;  right: 50%;  bottom: 50%;  -webkit-border-radius: 2px;  border-radius: 2px;  width: 480px;  height: 290px;  margin: -150px 0 0 -250px;  -webkit-box-shadow: -1px 1px 5px rgba(0,0,0,0.4);  box-shadow: -1px 1px 5px rgba(0,0,0,0.4);  background: #fff;  -webkit-transform: scale(0.2);  -moz-transform: scale(0.2);  -o-transform: scale(0.2);  -ms-transform: scale(0.2);  transform: scale(0.2);  -webkit-transition: all 1s ease-in-out;  -moz-transition: all 1s ease-in-out;  -o-transition: all 1s ease-in-out;  -ms-transition: all 1s ease-in-out;  transition: all 1s ease-in-out;  opacity: 0;  filter: alpha(opacity=0);  -ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=0)';}body #modal-window section > * {  position: absolute;  left: 0;  right: 0;}body #modal-window section header {  top: 0;  height: 55px;  line-height: 55px;  overflow: hiden;  font-size: 18pt;  font-weight: 100;  padding-left: 10px;}body #modal-window section nav {  top: 10px;  right: 10px;}body #modal-window section nav li {  list-style: none;  margin: 5px;  display: inline-block;  float: right;  font-size: 12pt;}body #modal-window section article {  overflow: auto;  top: 70px;  bottom: 0;  padding: 0 20px 20px;}body #modal-window section article > div > div {  overflow: hidden;  clear: both;  min-height: 35px;  position: relative;}body #modal-window section article > div > div label {  height: 35px;  line-height: 35px;  float: left;}body #modal-window section article > div > div input,body #modal-window section article > div > div textarea {  width: 99%;  margin: 0;  padding: 5px 0;  text-indent: 5px;  outline: none;  border: solid 1px #ccc;  -webkit-box-shadow: 0 0 15px rgba(0,0,0,0.1) inset;  box-shadow: 0 0 15px rgba(0,0,0,0.1) inset;  color: #444;  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;}body #modal-window section article > div > div input:hover,body #modal-window section article > div > div textarea:hover,body #modal-window section article > div > div input:active,body #modal-window section article > div > div textarea:active,body #modal-window section article > div > div input:focus,body #modal-window section article > div > div textarea:focus {  -webkit-box-shadow: none;  box-shadow: none;  color: #111;}body #modal-window section article > div > div textarea {  height: 50px;}body #modal-window section article > div > div input[type='checkbox'] {  width: auto;  float: right;  -webkit-box-shadow: none;  box-shadow: none;  height: 35px;}body #modal-window section article > div > div input[type='button'] {  position: absolute;  left: 0;  right: 50%;  border: solid 1px #ccc;  background: -webkit-gradient(linear, left top, left bottom, color-stop(0, rgba(0,0,0,0)), color-stop(1, rgba(0,0,0,0.1)));  background: -webkit-linear-gradient(top, rgba(0,0,0,0) 0%, rgba(0,0,0,0.1) 100%);  background: -moz-linear-gradient(top, rgba(0,0,0,0) 0%, rgba(0,0,0,0.1) 100%);  background: -o-linear-gradient(top, rgba(0,0,0,0) 0%, rgba(0,0,0,0.1) 100%);  background: -ms-linear-gradient(top, rgba(0,0,0,0) 0%, rgba(0,0,0,0.1) 100%);  background: linear-gradient(top, rgba(0,0,0,0) 0%, rgba(0,0,0,0.1) 100%);  background-color: #fff;  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;  top: 0;  bottom: 0;  width: auto;}body #modal-window section article > div > div input[type='button']:hover {  background-color: #ccc;}body #modal-window section article > div > div input[type='button']:last-child {  right: 0;  left: 50%;}body #modal-window.fullscreen section {  width: 100%;  height: 100%;  margin: 0;  left: 0;  top: 0;  bottom: 0;  right: 0;}body .modal-active {  -webkit-transform: scale(0.9);  -moz-transform: scale(0.9);  -o-transform: scale(0.9);  -ms-transform: scale(0.9);  transform: scale(0.9);  -webkit-border-radius: 2px;  border-radius: 2px;  opacity: 0.8;  filter: alpha(opacity=80);  -ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=80)';  -webkit-filter: blur(2px);  -moz-filter: blur(2px);  -ms-filter: blur(2px);  -o-filter: blur(2px);  filter: blur(2px);}body .modal-active ~ #modal-container #modal-window {  background: rgba(0,0,0,0.2);  z-index: 1;}body .modal-active ~ #modal-container #modal-window section {  -webkit-transform: scale(1);  -moz-transform: scale(1);  -o-transform: scale(1);  -ms-transform: scale(1);  transform: scale(1);  opacity: 1;  -ms-filter: none;  filter: none;}@media (max-width:320px) {  body #modal-window section {    width: 300px;    margin-left: -150px;  }}body #appwrapper #application #sidebar-container > section {  display: inline-block;  position: fixed;  top: 0;  left: 0;  height: 75%;  max-height: 600px;  width: 250px;  background: #fff;  border-bottom-right-radius: 2px;  border: 1px solid #ccc;  border-left: none;  border-top: none;  -webkit-box-shadow: -1px 1px 5px rgba(0,0,0,0.4);  box-shadow: -1px 1px 5px rgba(0,0,0,0.4);  -webkit-transition: all 1s ease-in-out;  -moz-transition: all 1s ease-in-out;  -o-transition: all 1s ease-in-out;  -ms-transition: all 1s ease-in-out;  transition: all 1s ease-in-out;  -webkit-transform: translateX(-100%);  -moz-transform: translateX(-100%);  -o-transform: translateX(-100%);  -ms-transform: translateX(-100%);  transform: translateX(-100%);  z-index: 9;}body #appwrapper #application #sidebar-container > section * {  z-index: 2;}body #appwrapper #application #sidebar-container > section aside {  position: absolute;  right: -48px;  top: 0;  width: 47px;  height: 47px;  background: #fff;  font-size: 14pt;  line-height: 47px;  text-align: center;  border-left: solid 1px rgba(0,0,0,0.2);  -webkit-box-shadow: -1px 1px 5px rgba(0,0,0,0.2), 0 0 10px rgba(0,0,0,0.1);  box-shadow: -1px 1px 5px rgba(0,0,0,0.2), 0 0 10px rgba(0,0,0,0.1);  z-index: 999;  -webkit-transition: all 1s ease-in-out;  -moz-transition: all 1s ease-in-out;  -o-transition: all 1s ease-in-out;  -ms-transition: all 1s ease-in-out;  transition: all 1s ease-in-out;}body #appwrapper #application #sidebar-container > section nav {  position: absolute;  left: 0;  right: 0;  bottom: 0;  height: 45px;  border-top: solid 1px #ccc;  background: #fff;  -webkit-box-shadow: 0 0 15px rgba(0,0,0,0.2) inset;  box-shadow: 0 0 15px rgba(0,0,0,0.2) inset;}body #appwrapper #application #sidebar-container > section nav li {  display: inline-block;  background: #fff;  height: 45px;  margin-top: -1px;  line-height: 45px;  width: 45px;  text-align: center;  font-size: 14pt;  border-right: solid 1px rgba(0,0,0,0.2);  border-top: solid 1px #ccc;  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;  color: rgba(0,0,0,0.4);}body #appwrapper #application #sidebar-container > section nav li:hover {  color: rgba(0,0,0,0.7);}body #appwrapper #application #sidebar-container > section nav li.active {  border-top: solid 1px #fff;  color: #48f;  text-shadow: 0 1px 1px rgba(0,0,0,0.1);}body #appwrapper #application #sidebar-container > section section {  position: absolute;  bottom: 46px;  top: 0;  right: 0;  left: 0;  overflow: hidden;}body #appwrapper #application #sidebar-container > section section article {  position: absolute;  border: solid 1px rgba(0,0,0,0.2);  left: -1px;  right: -1px;  top: -1px;  bottom: -1px;  overflow: auto;  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;  -webkit-transform: translateX(-110%);  -moz-transform: translateX(-110%);  -o-transform: translateX(-110%);  -ms-transform: translateX(-110%);  transform: translateX(-110%);}body #appwrapper #application #sidebar-container > section section article h1 {  padding: 15px 0 15px 10px;  display: block;  border-bottom: solid 1px rgba(0,0,0,0.2);  font-size: 10pt;  margin: 0;}body #appwrapper #application #sidebar-container > section section article.active {  -webkit-transform: none;  -moz-transform: none;  -o-transform: none;  -ms-transform: none;  transform: none;}body #appwrapper #application #sidebar-container > section section article.active ~ article {  -webkit-transform: translateX(110%);  -moz-transform: translateX(110%);  -o-transform: translateX(110%);  -ms-transform: translateX(110%);  transform: translateX(110%);}body #appwrapper #application #sidebar-container > section section article ul {  padding: 0;  margin: 0;}body #appwrapper #application #sidebar-container > section section article li,body #appwrapper #application #sidebar-container > section section article h1,body #appwrapper #application #sidebar-container > section section article > p {  display: block;  border-bottom: solid 1px rgba(0,0,0,0.2);  font-size: 10pt;  margin: 0;}body #appwrapper #application #sidebar-container > section section article li > *,body #appwrapper #application #sidebar-container > section section article h1 > *,body #appwrapper #application #sidebar-container > section section article > p > * {  margin: 15px 0 15px 10px;}body #appwrapper #application #sidebar-container > section section article input,body #appwrapper #application #sidebar-container > section section article select,body #appwrapper #application #sidebar-container > section section article textarea {  display: block;  margin: 0;  width: 248px;  padding: 0;  height: 35px;  text-indent: 25px;  line-height: 35px;  border: none;  border-top: dotted 1px rgba(0,0,0,0.2);  outline: none;  color: #48f;}body #appwrapper #application #sidebar-container > section section article select {  -webkit-appearance: none;}body #appwrapper #application #sidebar-container > section section article img.qrcode {  width: 190px;  height: 190px;  margin: 10px 25px;  padding: 5px;  -webkit-border-radius: 100%;  border-radius: 100%;  background: #000;}body #appwrapper #application #sidebar-container > section section article label {  display: block;}body #appwrapper #application #sidebar-container > section section article #documentlistplaceholder section {  top: 49px;  bottom: 0;  padding-top: 55px;}body #appwrapper #application #sidebar-container > section section article #documentlistplaceholder section nav {  bottom: auto;  top: 0;  border-top: none;  border-bottom: solid 1px #ccc;  overflow: auto;  overflow-y: hidden;  height: 55px;}body #appwrapper #application #sidebar-container > section section article #documentlistplaceholder section nav .slider {  display: block;  width: 282px;  height: 45px;}body #appwrapper #application #sidebar-container > section section article #documentlistplaceholder section nav li {  display: inline-block;  border: none;  border-right: solid 1px #ddd;  border-bottom: solid 1px #ccc;  float: left;  height: 45px;  width: 45px;  line-height: 45px;  padding: 0;  margin: 0 0 -1px 0;  -webkit-transition-duration: 0.25s;  -moz-transition-duration: 0.25s;  -o-transition-duration: 0.25s;  -ms-transition-duration: 0.25s;  transition-duration: 0.25s;}body #appwrapper #application #sidebar-container > section section article #documentlistplaceholder section nav li:hover {  border-bottom-color: #fff;}body #appwrapper #application #sidebar-container > section section article #documentlistplaceholder section nav li > * {  margin: 0;}body #appwrapper #application #sidebar-container > section section article #documentlistplaceholder section article {  position: relative;  -webkit-transform: none;  -moz-transform: none;  -o-transform: none;  -ms-transform: none;  transform: none;}body #appwrapper #application #sidebar-container > section.open {  -webkit-transform: none;  -moz-transform: none;  -o-transform: none;  -ms-transform: none;  transform: none;}body #appwrapper #application #sidebar-container > section.open aside {  right: 0;  -webkit-box-shadow: -2px 0 5px rgba(0,0,0,0.2);  box-shadow: -2px 0 5px rgba(0,0,0,0.2);}@media (max-width:320px) {  body #appwrapper #application #sidebar-container > section {    height: 100%;    max-height: 100%;  }}body #loadingscreen {  position: absolute;  left: 0;  right: 0;  top: 0;  bottom: 0;  opacity: 0;  filter: alpha(opacity=0);  -ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=0)';  z-index: -1;  -webkit-transition: all 1s ease-in-out;  -moz-transition: all 1s ease-in-out;  -o-transition: all 1s ease-in-out;  -ms-transition: all 1s ease-in-out;  transition: all 1s ease-in-out;  overflow: hidden;}body #loadingscreen * {  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;}body #loadingscreen > section {  width: 100%;  height: 100%;  background: #000;  opacity: 0.8;  filter: alpha(opacity=80);  -ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=80)';  trnasition: all 1s ease-in-out;}body #loadingscreen > aside {  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;  position: absolute;  left: -200%;  right: 200%;  top: 0;  bottom: 0;  background: #fff;  -webkit-box-shadow: 0 0 5px rgba(0,0,0,0.2);  box-shadow: 0 0 5px rgba(0,0,0,0.2);}body #loadingscreen > aside:last-of-type {  border: solid 1px rgba(0,0,0,0.05);  left: 200%;  right: -200%;}body #loadingscreen.active > aside {  left: 0;  right: 0;}body #loadingscreen > article {  height: 200px;  width: 350px;  background: #fff;  -webkit-border-radius: 4px;  border-radius: 4px;  -webkit-box-shadow: 0 5px 5px rgba(0,0,0,0.2);  box-shadow: 0 5px 5px rgba(0,0,0,0.2);  border: solid 1px rgba(0,0,0,0.2);  opacity: 0;  filter: alpha(opacity=0);  -ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=0)';  position: absolute;  z-index: 9;  left: 50%;  top: 50%;  margin: -100px 0 0 -175px;  text-align: center;  -webkit-transform: scale(10);  -moz-transform: scale(10);  -o-transform: scale(10);  -ms-transform: scale(10);  transform: scale(10);  font-family: Roboto;  font-size: 18pt;  font-weight: 100;  text-align: center;  line-height: 200px;  vertical-align: middle;}body #loadingscreen > article > span,body #loadingscreen > article p,body #loadingscreen > article div {  display: inline-block;  vertical-align: middle;}body #loadingscreen > article > span {  width: 30px;  height: 30px;  -webkit-border-radius: 100%;  border-radius: 100%;  border: solid 1px rgba(0,0,0,0.3);  margin-top: -6px;}body #loadingscreen > article div {  width: 0;  overflow: hidden;}body #loadingscreen > article div p {  float: left;}body #loadingscreen > article div:last-of-type p {  float: right;}body #loadingscreen > article > p {  line-height: 1em;  position: absolute;  left: 10%;  right: 10%;  top: 65%;  height: 50px;  font-size: 14pt;  overflow: hidden;}body #loadingscreen > article:hover > span {  border-color: rgba(0,0,0,0.8);}body #loadingscreen > article:hover div {  width: 80px;  margin: 0;  padding: 0;  margin-left: 11px;}body #loadingscreen > article:hover div:last-of-type {  width: 11px;  margin: 0;  margin-right: 80px;}body #loadingscreen.active > article {  opacity: 1;  -ms-filter: none;  filter: none;  -webkit-transform: scale(1);  -moz-transform: scale(1);  -o-transform: scale(1);  -ms-transform: scale(1);  transform: scale(1);}body #loadingscreen.active {  z-index: 99;  opacity: 1;  -ms-filter: none;  filter: none;}body section#application #documentplaceholder > section > section > aside {  display: block;  width: 100%;  height: 100px;  border: solid 1px rgba(0,0,0,0.2);  -webkit-box-shadow: 0 0 25px rgba(0,0,0,0.2) inset;  box-shadow: 0 0 25px rgba(0,0,0,0.2) inset;  text-align: center;  position: relative;  line-height: 100px;  overflow: hidden;}body section#application #documentplaceholder > section > section > aside i {  font-size: 100px;  color: rgba(0,0,0,0.2);  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;}body section#application #documentplaceholder > section > section > aside:hover i {  color: rgba(0,0,0,0.4);}body section#application #documentplaceholder > section > section > article {  display: block;  margin: 0 -1px;  padding: 0;  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;  border-left: solid 1px rgba(0,0,0,0.2);  border-right: solid 1px rgba(0,0,0,0.2);  border-bottom: solid 1px #ccc;  background: -webkit-gradient(linear, left top, left bottom, color-stop(0, rgba(0,0,0,0.1)), color-stop(1, rgba(0,0,0,0.2)));  background: -webkit-linear-gradient(top, rgba(0,0,0,0.1) 0, rgba(0,0,0,0.2) 100%);  background: -moz-linear-gradient(top, rgba(0,0,0,0.1) 0, rgba(0,0,0,0.2) 100%);  background: -o-linear-gradient(top, rgba(0,0,0,0.1) 0, rgba(0,0,0,0.2) 100%);  background: -ms-linear-gradient(top, rgba(0,0,0,0.1) 0, rgba(0,0,0,0.2) 100%);  background: linear-gradient(top, rgba(0,0,0,0.1) 0, rgba(0,0,0,0.2) 100%);}body section#application #documentplaceholder > section > section > article * {  -webkit-transition: all 0.25s ease-in-out;  -moz-transition: all 0.25s ease-in-out;  -o-transition: all 0.25s ease-in-out;  -ms-transition: all 0.25s ease-in-out;  transition: all 0.25s ease-in-out;}body section#application #documentplaceholder > section > section > article.inactive {  -webkit-transform: translateX(100%);  -moz-transform: translateX(100%);  -o-transform: translateX(100%);  -ms-transform: translateX(100%);  transform: translateX(100%);  border: none;}body section#application #documentplaceholder > section > section > article.inactive aside {  height: 0;}body section#application #documentplaceholder > section > section > article aside {  height: 45px;  width: 100%;  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;  position: relative;}body section#application #documentplaceholder > section > section > article aside > * {  display: block;}body section#application #documentplaceholder > section > section > article aside#secondary {  overflow: 0;  height: 150px;  margin-left: 73px;  background: -webkit-gradient(linear, left top, right top, color-stop(0, rgba(255,255,255,0.8)), color-stop(1, rgba(255,255,255,0.4)));  background: -webkit-linear-gradient(left, rgba(255,255,255,0.8) 0, rgba(255,255,255,0.4) 100%);  background: -moz-linear-gradient(left, rgba(255,255,255,0.8) 0, rgba(255,255,255,0.4) 100%);  background: -o-linear-gradient(left, rgba(255,255,255,0.8) 0, rgba(255,255,255,0.4) 100%);  background: -ms-linear-gradient(left, rgba(255,255,255,0.8) 0, rgba(255,255,255,0.4) 100%);  background: linear-gradient(left, rgba(255,255,255,0.8) 0, rgba(255,255,255,0.4) 100%);}body section#application #documentplaceholder > section > section > article aside#secondary.inactive {  height: 0;  margin: 0;  opacity: 0;  filter: alpha(opacity=0);  -ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=0)';  z-index: -1;  padding: 0;}body section#application #documentplaceholder > section > section > article aside#secondary label {  display: block;  position: relative;}body section#application #documentplaceholder > section > section > article aside#secondary label span {  left: 0;}body section#application #documentplaceholder > section > section > article aside#secondary label div {  right: 0;  left: 0;}body section#application #documentplaceholder > section > section > article aside#secondary label div input {  border: solid 1px #ccc;}body section#application #documentplaceholder > section > section > article aside#secondary label:last-child {  height: 106px;}body section#application #documentplaceholder > section > section > article aside#secondary label:last-child div {  left: 0;  right: 0;  top: 0;  bottom: 0;  padding: 25px;  border: solid 1px #ccc;  border-bottom: none;  background: #fff;}body section#application #documentplaceholder > section > section > article aside#secondary label:last-child div textarea {  height: 100%;  width: 100%;  margin: 0;  border: none;}body section#application #documentplaceholder > section > section > article aside nav {  position: absolute;  top: 0;  bottom: 0;  left: 0;}body section#application #documentplaceholder > section > section > article aside nav#primary {  left: auto;  right: 0;}body section#application #documentplaceholder > section > section > article aside nav > * {  float: left;  list-style: none;  width: 35px;  height: 45px;  line-height: 45px;  text-align: center;  border-right: solid 1px rgba(0,0,0,0.2);  background: rgba(255,255,255,0.8);  background: -webkit-gradient(linear, left top, right top, color-stop(0, rgba(255,255,255,0.8)), color-stop(1, rgba(255,255,255,0.4)));  background: -webkit-linear-gradient(left, rgba(255,255,255,0.8) 0, rgba(255,255,255,0.4) 100%);  background: -moz-linear-gradient(left, rgba(255,255,255,0.8) 0, rgba(255,255,255,0.4) 100%);  background: -o-linear-gradient(left, rgba(255,255,255,0.8) 0, rgba(255,255,255,0.4) 100%);  background: -ms-linear-gradient(left, rgba(255,255,255,0.8) 0, rgba(255,255,255,0.4) 100%);  background: linear-gradient(left, rgba(255,255,255,0.8) 0, rgba(255,255,255,0.4) 100%);}body section#application #documentplaceholder > section > section > article aside nav > * > label {  display: block;  width: 100%;  height: 100%;}body section#application #documentplaceholder > section > section > article aside nav > *:first-child {  border-left: solid 1px rgba(0,0,0,0.2);}body section#application #documentplaceholder > section > section > article aside nav > *.inactive {  color: transparent;}body section#application #documentplaceholder > section > section > article aside nav input {  display: none;}body section#application #documentplaceholder > section > section > article aside input {  height: 45px;  width: 100%;  margin: 0;  border: none;  text-indent: 25px;  outline: none;  padding: 0;  -webkit-border-radius: 0;  border-radius: 0;}body section#application #documentplaceholder > section > section > article aside input[type='checkbox'] {  z-index: -1;  opacity: 0;  filter: alpha(opacity=0);  -ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=0)';  -webkit-transform: translateX(-1000%);  -moz-transform: translateX(-1000%);  -o-transform: translateX(-1000%);  -ms-transform: translateX(-1000%);  transform: translateX(-1000%);}body section#application #documentplaceholder > section > section > article aside label {  height: 45px;}body section#application #documentplaceholder > section > section > article aside label span {  position: absolute;  height: 25px;  width: auto;  padding: 0 10px;  line-height: 25px;  bottom: 0;  left: 73px;  opacity: 0;  filter: alpha(opacity=0);  -ms-filter: 'progid:DXImageTransform.Microsoft.Alpha(Opacity=0)';  z-index: -1;  background: #ccc;  color: #000;  text-shadow: 0 1px 1px #fff;  -webkit-box-shadow: 0 0 2px rgba(0,0,0,0.5);  box-shadow: 0 0 2px rgba(0,0,0,0.5);}body section#application #documentplaceholder > section > section > article aside label div {  position: absolute;  left: 73px;  right: 109px;}body section#application #documentplaceholder > section > section > article aside label:hover span {  -webkit-transform: translateY(25px);  -moz-transform: translateY(25px);  -o-transform: translateY(25px);  -ms-transform: translateY(25px);  transform: translateY(25px);  opacity: 1;  -ms-filter: none;  filter: none;  z-index: 1;}body section#application #documentplaceholder > section > section > article aside label:hover input {  z-index: 2;}body section#application #documentplaceholder > section > section > article .modal.button {  display: none;}body section#application #documentplaceholder > section > section {  overflow-y: auto;  overflow-x: hidden;}@media (max-width:320px) {  body section#application #documentplaceholder > section > section nav > * {    width: 25px !important;    height: 35px !important;    line-height: 35px !important;  }  body section#application #documentplaceholder > section > section .button.add,  body section#application #documentplaceholder > section > section .button.remove,  body section#application #documentplaceholder > section > section .button.showhide {    display: none;  }  body section#application #documentplaceholder > section > section .button.modal {    display: block !important;    border-left: solid 1px #ccc;  }  body section#application #documentplaceholder > section > section input,  body section#application #documentplaceholder > section > section label,  body section#application #documentplaceholder > section > section aside#primary {    height: 35px !important;  }  body section#application #documentplaceholder > section > section aside#primary div {    right: 26px;    left: 52px;  }  body section#application #documentplaceholder > section > section article.inactive aside#primary {    height: 0 !important;  }}body section#application #documentplaceholder > section {  position: absolute;  left: 0;  right: 0;  top: 0;  bottom: 0;  -webkit-perspective: 200px;  -moz-perspective: 200px;  -ms-perspective: 200px;  perspective: 200px;  background: -moz-radial-gradient(center, ellipse cover, rgba(0,0,0,0) 0%, rgba(0,0,0,0.4) 100%);  background: -webkit-gradient(radial, center center, 0px, center center, 100%, color-stop(0%, rgba(0,0,0,0)), color-stop(100%, rgba(0,0,0,0.4)));  background: -webkit-radial-gradient(center, ellipse cover, rgba(0,0,0,0) 0%, rgba(0,0,0,0.4) 100%);  background: -o-radial-gradient(center, ellipse cover, rgba(0,0,0,0) 0%, rgba(0,0,0,0.4) 100%);  background: -ms-radial-gradient(center, ellipse cover, rgba(0,0,0,0) 0%, rgba(0,0,0,0.4) 100%);  background: radial-gradient(ellipse at center, rgba(0,0,0,0) 0%, rgba(0,0,0,0.4) 100%);}body section#application #documentplaceholder > section header {  position: absolute;  left: 0;  right: 0;  top: 0;  bottom: 0;  height: 45px;  line-height: 45px;  font-size: 14pt;  font-weight: 100;  bottom: auto;  padding-left: 65px;  background: #fff;  border-bottom: solid 1px #ccc;  -webkit-box-shadow: 0 0 5px rgba(0,0,0,0.2);  box-shadow: 0 0 5px rgba(0,0,0,0.2);  z-index: 3;  overflow: hidden;  -webkit-transition: all 0.75s ease-in-out;  -moz-transition: all 0.75s ease-in-out;  -o-transition: all 0.75s ease-in-out;  -ms-transition: all 0.75s ease-in-out;  transition: all 0.75s ease-in-out;  -webkit-transition-delay: 0.25s;  -moz-transition-delay: 0.25s;  -o-transition-delay: 0.25s;  -ms-transition-delay: 0.25s;  transition-delay: 0.25s;}body section#application #documentplaceholder > section header nav {  position: absolute;  left: 0;  right: 0;  top: 0;  bottom: 0;  height: 45px;  line-height: 45px;  font-size: 14pt;  font-weight: 100;  left: auto;}body section#application #documentplaceholder > section header nav li {  float: right;  list-style: none;  padding: 0 15px;  display: inline-block;  color: rgba(0,0,0,0.4);  text-shadow: 0 1px 1px #fff;  -webkit-transition: all 0.5s ease-in-out;  -moz-transition: all 0.5s ease-in-out;  -o-transition: all 0.5s ease-in-out;  -ms-transition: all 0.5s ease-in-out;  transition: all 0.5s ease-in-out;}body section#application #documentplaceholder > section header nav li:hover {  color: rgba(0,0,0,0.8);}body section#application #documentplaceholder > section header nav li.active {  color: #000;}body section#application #documentplaceholder > section > section {  position: absolute;  left: 0;  right: 0;  top: 0;  bottom: 0;  top: 45px;  -webkit-backface-visibility: hidden;  -moz-backface-visibility: hidden;  -ms-backface-visibility: hidden;  backface-visibility: hidden;  background: #fff;  z-index: 1;  -webkit-transition: all 1s ease-in-out;  -moz-transition: all 1s ease-in-out;  -o-transition: all 1s ease-in-out;  -ms-transition: all 1s ease-in-out;  transition: all 1s ease-in-out;  -webkit-transform: rotateY(-90deg) translateX(-100%);  -moz-transform: rotateY(-90deg) translateX(-100%);  -o-transform: rotateY(-90deg) translateX(-100%);  -ms-transform: rotateY(-90deg) translateX(-100%);  transform: rotateY(-90deg) translateX(-100%);  left: -100%;  right: 100%;  -webkit-box-shadow: 0 0 15px rgba(0,0,0,0.8);  box-shadow: 0 0 15px rgba(0,0,0,0.8);  background: #fff;}body section#application #documentplaceholder > section > section.active {  left: 0 !important;  right: 0 !important;  -webkit-transform: none !important;  -moz-transform: none !important;  -o-transform: none !important;  -ms-transform: none !important;  transform: none !important;  z-index: 2 !important;}body section#application #documentplaceholder > section > section:last-child {  -webkit-transform: rotateY(90deg) translateX(100%);  -moz-transform: rotateY(90deg) translateX(100%);  -o-transform: rotateY(90deg) translateX(100%);  -ms-transform: rotateY(90deg) translateX(100%);  transform: rotateY(90deg) translateX(100%);  right: -100%;  left: 100%;}body section#application #documentplaceholder > section.sidebaropen header {  padding-left: 265px;  -webkit-transition-duration: 0.5s;  -moz-transition-duration: 0.5s;  -o-transition-duration: 0.5s;  -ms-transition-duration: 0.5s;  transition-duration: 0.5s;  -webkit-transition-delay: 0;  -moz-transition-delay: 0;  -o-transition-delay: 0;  -ms-transition-delay: 0;  transition-delay: 0;}";
 		element.id = "compiled_styles";
 		return element;
 	}

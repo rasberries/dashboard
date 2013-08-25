@@ -1,1 +1,8 @@
-<h1 <%= _T "Applications" %>></h1>
+<div id="recipies-container" ng-controller="ApplicationsController">
+	<h1 <%= _T "Applications" %>></h1>
+	<input type="search" ng-model="searchTerms.data" <%= _T "Search", "placeholder" %>>
+	<article ng-repeat="recipe in recipeModel.recipes | filter:searchTerms" ng-show="runtime.props['active-tab'] == 1">
+		<h2 ng-bind="recipe._id"></h2>
+		<select ng-change="installApp(recipe)" ng-model="info.device" ng-options="device.name for (key, device) in user.devices"></select>
+	</article>
+</div>ac

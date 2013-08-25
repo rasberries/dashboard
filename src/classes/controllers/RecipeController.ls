@@ -10,15 +10,18 @@ class RecipeController extends IS.Object
 			else @scope.$apply(fn)
 		@scope <<< @
 		@
-	get-model: ~> @recipes = @recipe-model._reccords; @recipe-model.controller = @; @
+	get-model: ~> @recipe-model.controller = @; @
 	hook-events: ~>
 	toggle-editing: (recipe) ~>
 		recipe.editing = not recipe.editing
 		recipe.get-data!
 		setTimeout LanguageHelper._translateAll, 50
-	remove: (recipe) ~> @log @recipes, recipe; delete @recipes[recipe._uuid]; @safeApply!
+	remove: (recipe) ~> 
+		Client.post "apps/remove", {id: "#{UserModel.data.mail}$#{recipe.data.name}"}, (-> Toast "Success", "Removed Successfuly"), (-> Toast "Error", "Something went wrong")
+		delete @recipes[recipe._uuid]
+		@safeApply!
 	add-recipe: (recipe) ~> @recipe-model.new!
-	add-stub: (to) ~> to.push url: "http://github.com/rasberries/", instructions: []; setTimeout LanguageHelper._translateAll, 50
+	add-stub: (to) ~> to.stubs ?= []; to.stubs.push url: "http://github.com/rasberries/", instructions: []; setTimeout LanguageHelper._translateAll, 50
 	add-instruction: (to) ~> to.push command: "New Instruction"; setTimeout LanguageHelper._translateAll, 50
 	remove-instruction: (whom, fr) ~> fr.splice (fr.indexOf whom), 1
 	remove-stub: (whom, fr) ~> fr.splice (fr.indexOf whom), 1 

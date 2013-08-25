@@ -1,3 +1,13 @@
+placeholder(col)
+	&::-webkit-input-placeholder
+		color col
+	&:-moz-placeholder
+		color col
+	&::-moz-placeholder
+		color col
+	&:-ms-input-placeholder
+		color col
+
 &#application
 	background #444
 	z-index 2
@@ -65,6 +75,7 @@
 			transform translateX(-110%)
 			padding 25px
 			background white
+			overflow auto
 			&.active
 				transform none
 				~ article
@@ -145,6 +156,22 @@
 						position relative
 						li
 							width 100%
+				> input
+					width 100%
+					padding 20px 25px
+					margin-top 20px
+					background bluecol
+					color white
+					border none
+					transition all 0.5s ease-in-out
+					outline none
+					font-size 18pt
+					placeholder(rgba(256, 256, 256, 0.5))
+					&:hover, &:active, &:focus
+						background orangecol
+						color black
+						placeholder(rgba(0, 0, 0, 0.5))
+
 				article, label, div, li
 					display block
 					position relative

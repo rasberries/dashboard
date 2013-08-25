@@ -54,21 +54,10 @@ class PageController extends IS.Object
 					do fn
 			else @scope.$apply(fn)
 		@scope <<< @
-	init-runtime: ~> @runtime.init "app-state", \number
+	init-runtime: ~> @runtime.init "app-state", \number; @runtime.subscribe "prop-app-state-change", @safeApply
 	get-stored: ~>
-		@prev-state = States[\landing]
-		DBStorage.get "app-state", (state) ~>
-			@prev-state = (parseInt state) or States[\landing]
-			@runtime.set "app-state", @prev-state
-			@safeApply!
-		@runtime.subscribe "prop-app-state-change", (value) ~>
-			switch value
-			| States[\landing] => DBStorage.set "app-state", States[\landing]; @log "State changed, switching to landing next time!"
-			| otherwise =>
-				if @prev-state is States[\landing]
-					DBStorage.set "app-state", States[\application]
-					@log "State changed, switching to app next time!"
-			@prev-state = value
+		@runtime.set "app-state", States.landing
+		@safeApply!
 
 	# Finally, the stuff connected with the scope (angular magic)
 	get-body-state: ~> STATES[@runtime.get "app-state"]

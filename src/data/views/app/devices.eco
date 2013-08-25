@@ -1,1 +1,7 @@
-<h1 <%= _T "Devices Management" %>></h1>
+<div id="recipes-container" ng-controller="DevicesController">
+	<h1 <%= _T "Devices Management" %>></h1>
+	<input type="search" ng-model="searchTerms.data" <%= _T "Search", "placeholder" %>>
+	<article ng-repeat="recipe in recipeModel.recipes | filter:searchTerms">
+		<h2 ng-bind="recipe._id"></h2>
+	</article>
+</div>

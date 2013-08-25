@@ -68,6 +68,8 @@ class Application extends IS.Object
 		DepMan.controller "AppRouter"
 		DepMan.controller "AccountController"
 		DepMan.controller "RecipeController"
+		DepMan.controller "ApplicationsController"
+		DepMan.controller "DevicesController"
 		DepMan.model "UserModel"
 		angular.bootstrap document.body, [AppInfo.displayname]
 

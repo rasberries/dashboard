@@ -1,7 +1,7 @@
 <div ng-controller="Landing" id="landingpage">
 	<section>
 	  <header>
-	  	<h1 class="left">Raspr</h1>
+	  	<h1 class="left">Rasp</h1>
 	  	<img src="<%= DepMan.image "logo" %>" alt="" />
 	  	<h1 class="right">Store</h1>
 	  </header>

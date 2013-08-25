@@ -1,6 +1,7 @@
 <div ng-controller="RecipeController" id="recipies-container">
 	<h1 <%= _T "Your Recipes" %>></h1>
-	<article ng-repeat="(uuid, recipe) in recipes">
+	<input type="search" ng-model="searchTerms.data" <%= _T "Search", "placeholder" %>>
+	<article ng-repeat="recipe in recipeModel.recipes | filter:searchTerms" ng-show="runtime.props['active-tab'] == 3">
 		<h2 ng-bind="recipe._id"></h2>
 		<nav>
 			<li ng-click="toggleEditing(recipe)"><i class="icon-wrench"></i></li>
@@ -9,7 +10,7 @@
 		<div ng-class="{true: 'active', false: 'inactive', undefined: 'inactive'}[recipe.editing]">
 			<label for="recipe-name-{{recipe._uuid}}">
 				<span <%= _T "The name of the recipe" %>></span>
-				<input type="text" id='recipe-name-{{recipe._uuid}}' ng-model="recipe._id" <%= _T "Recipe Name", "placeholder" %> >
+				<input type="text" id='recipe-name-{{recipe._uuid}}' ng-model="recipe._id" <%= _T "Recipe Name", "placeholder" %> ng-change="recipe.data.name = recipe._id" >
 			</label>
 			<article ng-repeat="stub in recipe.data.stubs">
 				<label for="recipe-stub-{{recipe._uuid}}">
@@ -35,8 +36,9 @@
 				</nav>
 			</article>
 			<nav class="add">
-				<li ng-click="addStub(recipe.data.stubs)"><i class="icon-plus"></i></li>
+				<li ng-click="addStub(recipe.data)"><i class="icon-plus"></i></li>
 			</nav>
+			<button class="save" ng-click='recipe.save()' <%= _T "Save" %>></button>
 		</div>
 	</article>
 	<nav class="add">
