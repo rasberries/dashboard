@@ -6,8 +6,10 @@
 		<nav>
 			<li ng-click="remove(uuid)"><i class='icon-remove'></i></li>
 		</nav>
+		<input type="text" ng-model="device.name">
 		<textarea name="" id="">{{device.installed_apps.join("\n")}}</textarea>
 		<textarea name="" id="">{{device.app_stack.join("\n")}}</textarea>
+		<button class='submit' ng-click="update(device)" <%= _T "Submit" %>></button>
 	</article>
 	<nav class="add">
 		<li ng-click="add()"><i class='icon-plus'></i></li>

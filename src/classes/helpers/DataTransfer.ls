@@ -1,5 +1,5 @@
 class Client extends IS.Object
-	~> @config = root-url: "http://10.0.0.180:3000/"
+	~> @config = root-url: "http://localhost:3000/"
 	request: (something, successcb, errorcb) ~> 
 		$.ajax {
 			url: "#{@config.root-url}api/#something"

@@ -12,6 +12,7 @@ class DevicesController extends IS.Object
 		@
 
 	get-model: ~> @recipe-model.controller = @; @
+	update: (device) ~> Client.post "devices/register", mail: device.mail, uuid: device.uuid, name: device.name
 	hook-events: ~>
 
 angular.module AppInfo.displayname .controller "DevicesController", ["$scope", "Runtime", "Recipe", "User", DevicesController]
